@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 /**
  * 三重県入札情報サイトのスクレイパー
- * フレームセット構造とセッション管理に対応
+ * 実際のサイト構造に完全対応（最終版）
  */
 
 const MIE_BIDDING_URL = "https://mie.efftis.jp/24000/ppi/pub";
@@ -28,112 +28,171 @@ export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
   try {
     // Chrome オプションの設定
     const options = new chrome.Options();
-    options.addArguments("--headless"); // ヘッドレスモード
+    options.addArguments("--headless");
     options.addArguments("--no-sandbox");
     options.addArguments("--disable-dev-shm-usage");
     options.addArguments("--disable-gpu");
     options.addArguments("--window-size=1920,1080");
 
+    // ChromeDriver 128を使用
+    const service = new chrome.ServiceBuilder('/usr/local/bin/chromedriver-128');
+
     // WebDriverの初期化
     driver = await new Builder()
       .forBrowser("chrome")
       .setChromeOptions(options)
+      .setChromeService(service)
       .build();
 
     console.log("[Scraper] Starting scraping process...");
 
-    // 親ページにアクセス（セッション確立）
+    // 検索ページにアクセス
     await driver.get(MIE_BIDDING_URL);
-    console.log("[Scraper] Accessed parent page");
+    console.log("[Scraper] Accessed search page");
 
     // ページの読み込みを待機
-    await driver.wait(until.elementLocated(By.css("frameset, frame")), 10000);
+    await driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
+    console.log("[Scraper] Search form loaded");
 
-    // フレームを取得
-    const frames = await driver.findElements(By.css("frame"));
-    console.log(`[Scraper] Found ${frames.length} frames`);
+    // 最新公告情報ボタンをJavaScriptで実行
+    await driver.executeScript("LinkSubmit('P004','4','searchBtn');");
+    console.log("[Scraper] Latest bidding info button clicked");
 
-    if (frames.length === 0) {
-      throw new Error("No frames found on the page");
+    // 結果テーブルの表示を十分に待機
+    await driver.sleep(8000);
+    console.log("[Scraper] Waiting for result table...");
+
+    // すべてのテーブルを取得
+    const tables = await driver.findElements(By.css("table"));
+    console.log(`[Scraper] Found ${tables.length} tables`);
+
+    if (tables.length === 0) {
+      return {
+        success: false,
+        itemsScraped: 0,
+        newItems: 0,
+        biddings: [],
+        error: "No tables found on page",
+      };
     }
 
-    // 検索フォームがあるフレームに切り替え（通常2番目のフレーム）
-    // フレーム名が "post" または src に "PPI0102" が含まれるものを探す
-    let targetFrameIndex = -1;
-    for (let i = 0; i < frames.length; i++) {
-      const frameName = await frames[i].getAttribute("name");
-      const frameSrc = await frames[i].getAttribute("src");
-      console.log(`[Scraper] Frame ${i}: name="${frameName}", src="${frameSrc}"`);
-
-      if (frameName === "post" || frameSrc.includes("PPI0102")) {
-        targetFrameIndex = i;
-        break;
+    // 結果テーブルを特定（ヘッダー行に「案件名称」を含むテーブル）
+    let resultTable = null;
+    
+    for (const table of tables) {
+      try {
+        const firstRow = await table.findElement(By.css("tr"));
+        const headerText = await firstRow.getText();
+        
+        if (headerText.includes("案件名称") && headerText.includes("発注機関")) {
+          resultTable = table;
+          console.log("[Scraper] Found result table with header:", headerText.substring(0, 100));
+          break;
+        }
+      } catch (error) {
+        // このテーブルにはtr要素がない、次へ
+        continue;
       }
     }
 
-    if (targetFrameIndex === -1) {
-      // デフォルトで2番目のフレームを使用
-      targetFrameIndex = Math.min(1, frames.length - 1);
+    if (!resultTable) {
+      console.log("[Scraper] Result table not found, using largest table as fallback");
+      // フォールバック: 最も行数が多いテーブルを使用
+      let maxRows = 0;
+      for (const table of tables) {
+        const rows = await table.findElements(By.css("tr"));
+        if (rows.length > maxRows) {
+          maxRows = rows.length;
+          resultTable = table;
+        }
+      }
     }
 
-    console.log(`[Scraper] Switching to frame ${targetFrameIndex}`);
-    await driver.switchTo().frame(targetFrameIndex);
+    if (!resultTable) {
+      return {
+        success: false,
+        itemsScraped: 0,
+        newItems: 0,
+        biddings: [],
+        error: "Could not identify result table",
+      };
+    }
 
-    // フォームの読み込みを待機
-    await driver.wait(
-      until.elementLocated(By.css('form, input[type="text"], button, input[type="submit"]')),
-      10000
-    );
-
-    console.log("[Scraper] Form loaded successfully");
-
-    // 検索条件を入力（すべての案件を取得するため、条件は空または広範囲に設定）
-    // 発注機関コードなどのフィールドがあれば設定可能
-    // ここでは検索ボタンをそのまま押して全件取得を試みる
-
-    // 検索ボタンを探して実行
-    const searchButton = await driver.findElement(
-      By.css('button[type="submit"], input[type="submit"], button:contains("検索")')
-    );
-    await searchButton.click();
-    console.log("[Scraper] Search button clicked");
-
-    // 結果の読み込みを待機
-    await driver.sleep(3000); // 結果表示を待つ
-
-    // 結果テーブルを取得
-    const resultTable = await driver.findElement(By.css("table"));
-    const rows = await resultTable.findElements(By.css("tbody tr"));
-
-    console.log(`[Scraper] Found ${rows.length} result rows`);
+    const rows = await resultTable.findElements(By.css("tr"));
+    console.log(`[Scraper] Found ${rows.length} rows in result table`);
 
     const biddings: InsertBidding[] = [];
 
-    // 各行をパース
-    for (let i = 0; i < rows.length; i++) {
+    // ヘッダー行をスキップして各行をパース
+    for (let i = 1; i < rows.length; i++) {
       try {
-        const cells = await rows[i].findElements(By.css("td"));
-        if (cells.length < 3) continue; // データ行でない場合はスキップ
+        const cells = await rows[i].findElements(By.css("td, th"));
+        
+        if (cells.length < 9) {
+          console.log(`[Scraper] Row ${i} has only ${cells.length} cells, skipping`);
+          continue;
+        }
 
         // セルのテキストを取得
         const cellTexts = await Promise.all(
           cells.map((cell) => cell.getText())
         );
 
-        // データ構造は実際のサイトに応じて調整が必要
-        // 仮の構造：[案件番号, 案件名, 発注機関, 入札日, ...]
+        // 空行をスキップ
+        const no = cellTexts[0]?.trim();
+        if (!no || no === "") {
+          continue;
+        }
+
+        console.log(`[Scraper] Row ${i}: No=${no}, Organ=${cellTexts[1]?.substring(0, 30)}`);
+
+        // データ構造:
+        // 0: No
+        // 1: 発注機関施行番号（連結、例: "伊勢建設事務所50705317"）
+        // 2: 質問有無
+        // 3: 案件名称
+        // 4: 入札方式等
+        // 5: 種別
+        // 6: 格付
+        // 7: 参加申請期間
+        // 8: 受付状況
+
+        // 発注機関と施行番号を分割（数字8桁を施行番号として抽出）
+        const organAndNumber = (cellTexts[1] || "").trim();
+        const numberMatch = organAndNumber.match(/(\d{8})$/);
+        const caseNumber = numberMatch ? numberMatch[1] : "";
+        const orderOrganName = numberMatch 
+          ? organAndNumber.substring(0, organAndNumber.length - 8)
+          : organAndNumber;
+
+        // 案件名称
+        const title = (cellTexts[3] || "").trim();
+
+        // 参加申請期間から日付を抽出
+        const applicationPeriod = (cellTexts[7] || "").trim();
+        const biddingDate = parseApplicationPeriod(applicationPeriod);
+
         const bidding: InsertBidding = {
-          caseNumber: cellTexts[0] || "",
-          title: cellTexts[1] || "",
-          orderOrganName: cellTexts[2] || "",
-          biddingDate: cellTexts[3] ? new Date(cellTexts[3]) : undefined,
-          status: cellTexts[4] || "公告中",
+          caseNumber,
+          title,
+          orderOrganName,
+          biddingMethod: (cellTexts[4] || "").trim(),
+          constructionType: (cellTexts[5] || "").trim(),
+          location: (cellTexts[6] || "").trim(), // 格付
+          constructionPeriod: applicationPeriod,
+          biddingDate,
+          status: (cellTexts[8] || "公告中").trim(),
           rawData: JSON.stringify(cellTexts),
           isNew: true,
           notified: false,
         };
 
-        biddings.push(bidding);
+        // 案件番号と案件名が存在する場合のみ追加
+        if (bidding.caseNumber && bidding.title) {
+          biddings.push(bidding);
+        } else {
+          console.log(`[Scraper] Row ${i} missing required data, skipping`);
+        }
       } catch (error) {
         console.error(`[Scraper] Error parsing row ${i}:`, error);
       }
@@ -144,7 +203,7 @@ export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
     return {
       success: true,
       itemsScraped: biddings.length,
-      newItems: biddings.length, // 新規判定はDB側で行う
+      newItems: biddings.length,
       biddings,
     };
   } catch (error) {
@@ -158,7 +217,6 @@ export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
       errorDetails: error instanceof Error ? error.stack : undefined,
     };
   } finally {
-    // WebDriverをクリーンアップ
     if (driver) {
       try {
         await driver.quit();
@@ -167,6 +225,34 @@ export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
         console.error("[Scraper] Error closing WebDriver:", error);
       }
     }
+  }
+}
+
+/**
+ * 参加申請期間から入札日を抽出
+ * 例: "R8/1/16 8:30 ～R8/1/29 12:00" → 終了日をDate型に変換
+ */
+function parseApplicationPeriod(periodStr: string): Date | undefined {
+  try {
+    if (!periodStr) return undefined;
+
+    // 終了日を抽出（～の後）
+    const match = periodStr.match(/～\s*R(\d+)\/(\d+)\/(\d+)/);
+    if (match) {
+      const reiwaYear = parseInt(match[1]);
+      const month = parseInt(match[2]);
+      const day = parseInt(match[3]);
+      
+      // 令和→西暦変換（令和元年=2019年）
+      const year = reiwaYear + 2018;
+      
+      return new Date(year, month - 1, day);
+    }
+
+    return undefined;
+  } catch (error) {
+    console.error("[Scraper] Error parsing application period:", periodStr, error);
+    return undefined;
   }
 }
 
