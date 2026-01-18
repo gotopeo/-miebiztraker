@@ -48,6 +48,22 @@ export const biddings = mysqlTable("biddings", {
   location: text("location"),
   /** 工期 */
   constructionPeriod: varchar("constructionPeriod", { length: 200 }),
+  /** 格付（A/B/C/D/指定なし） */
+  rating: varchar("rating", { length: 50 }),
+  /** 参加申請期間 */
+  applicationPeriod: varchar("applicationPeriod", { length: 200 }),
+  /** 参加申請締切日 */
+  applicationDeadline: timestamp("applicationDeadline"),
+  /** 質問有無 */
+  hasQuestion: varchar("hasQuestion", { length: 10 }),
+  /** 公告日 */
+  publicationDate: timestamp("publicationDate"),
+  /** 更新日 */
+  updateDate: timestamp("updateDate"),
+  /** 履行場所（詳細） */
+  performLocation: text("performLocation"),
+  /** 備考 */
+  remarks: text("remarks"),
   /** 入札状態（公告中、入札済み、中止等） */
   status: varchar("status", { length: 50 }),
   /** 詳細ページURL */
@@ -158,3 +174,53 @@ export const scheduleSettings = mysqlTable("scheduleSettings", {
 
 export type ScheduleSetting = typeof scheduleSettings.$inferSelect;
 export type InsertScheduleSetting = typeof scheduleSettings.$inferInsert;
+
+/**
+ * 検索条件履歴テーブル
+ * ユーザーが実行した検索条件を保存
+ */
+export const searchHistory = mysqlTable("searchHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ユーザーID */
+  userId: int("userId").notNull(),
+  /** 検索条件名 */
+  name: varchar("name", { length: 200 }),
+  /** 発注区分（電子入札/紙入札） */
+  orderType: varchar("orderType", { length: 50 }),
+  /** 入札方式 */
+  biddingMethod: varchar("biddingMethod", { length: 100 }),
+  /** 区分（工事/委託） */
+  projectType: varchar("projectType", { length: 50 }),
+  /** 種別コード（カンマ区切り） */
+  categoryCodes: text("categoryCodes"),
+  /** 格付（カンマ区切り） */
+  rating: varchar("rating", { length: 100 }),
+  /** 発注機関コード */
+  organizationCode: varchar("organizationCode", { length: 100 }),
+  /** 履行場所 */
+  location: varchar("location", { length: 200 }),
+  /** 公告日（From） */
+  publicationDateFrom: timestamp("publicationDateFrom"),
+  /** 公告日（To） */
+  publicationDateTo: timestamp("publicationDateTo"),
+  /** 予定価格（最小） */
+  estimatedPriceMin: decimal("estimatedPriceMin", { precision: 15, scale: 2 }),
+  /** 予定価格（最大） */
+  estimatedPriceMax: decimal("estimatedPriceMax", { precision: 15, scale: 2 }),
+  /** 件名キーワード */
+  titleKeyword: varchar("titleKeyword", { length: 200 }),
+  /** 施工番号 */
+  constructionNo: varchar("constructionNo", { length: 50 }),
+  /** 使用回数 */
+  useCount: int("useCount").default(1).notNull(),
+  /** 最終使用日時 */
+  lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  lastUsedAtIdx: index("lastUsedAt_idx").on(table.lastUsedAt),
+}));
+
+export type SearchHistory = typeof searchHistory.$inferSelect;
+export type InsertSearchHistory = typeof searchHistory.$inferInsert;

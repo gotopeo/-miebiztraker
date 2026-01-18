@@ -20,7 +20,8 @@ import {
   updateScheduleSetting,
   deleteScheduleSetting,
 } from "./db";
-import { scrapeMieBiddingSite } from "./scraper";
+import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
+import ExcelJS from "exceljs";
 
 export const appRouter = router({
   system: systemRouter,
@@ -112,11 +113,82 @@ export const appRouter = router({
 
         return items;
       }),
+
+    // Excelエクスポート
+    exportExcel: protectedProcedure
+      .input(
+        z.object({
+          keyword: z.string().optional(),
+          orderOrganCode: z.string().optional(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          status: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        // データ取得
+        const items = await searchBiddings({
+          keyword: input.keyword,
+          orderOrganCode: input.orderOrganCode,
+          startDate: input.startDate ? new Date(input.startDate) : undefined,
+          endDate: input.endDate ? new Date(input.endDate) : undefined,
+          status: input.status,
+          limit: 10000,
+        });
+
+        // Excelワークブック作成
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("入札情報");
+
+        // ヘッダー設定
+        worksheet.columns = [
+          { header: "No", key: "id", width: 10 },
+          { header: "案件番号", key: "caseNumber", width: 15 },
+          { header: "案件名", key: "title", width: 50 },
+          { header: "発注機関", key: "orderOrganName", width: 30 },
+          { header: "入札方式", key: "biddingMethod", width: 20 },
+          { header: "工事種別", key: "constructionType", width: 20 },
+          { header: "格付", key: "rating", width: 10 },
+          { header: "参加申請期間", key: "applicationPeriod", width: 30 },
+          { header: "状態", key: "status", width: 15 },
+          { header: "入札日", key: "biddingDate", width: 20 },
+          { header: "予定価格", key: "estimatedPrice", width: 15 },
+          { header: "工事場所", key: "location", width: 30 },
+        ];
+
+        // データ追加
+        items.forEach((item) => {
+          worksheet.addRow({
+            id: item.id,
+            caseNumber: item.caseNumber,
+            title: item.title,
+            orderOrganName: item.orderOrganName,
+            biddingMethod: item.biddingMethod,
+            constructionType: item.constructionType,
+            rating: item.rating,
+            applicationPeriod: item.applicationPeriod,
+            status: item.status,
+            biddingDate: item.biddingDate ? new Date(item.biddingDate).toLocaleDateString("ja-JP") : "",
+            estimatedPrice: item.estimatedPrice,
+            location: item.location,
+          });
+        });
+
+        // Excelファイルをバッファに変換
+        const buffer = await workbook.xlsx.writeBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+
+        return {
+          success: true,
+          data: base64,
+          filename: `mie_bidding_${new Date().toISOString().split("T")[0]}.xlsx`,
+        };
+      }),
   }),
 
   // スクレイピング関連API
   scraping: router({
-    // 手動スクレイピング実行
+    // 手動スクレイピング実行（最新公告情報）
     execute: protectedProcedure.mutation(async ({ ctx }) => {
       const startedAt = new Date();
 
@@ -130,37 +202,37 @@ export const appRouter = router({
 
       try {
         // スクレイピング実行
-        const result = await scrapeMieBiddingSite();
+        const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false);
 
         if (!result.success) {
           // 失敗
           await updateScrapingLog(logId, {
             finishedAt: new Date(),
             status: "failed",
-            errorMessage: result.error,
-            errorDetails: result.errorDetails,
+            errorMessage: result.errorMessage,
           });
 
           return {
             success: false,
-            error: result.error,
+            error: result.errorMessage,
           };
         }
 
         // データベースに保存
-        const { saved, duplicates } = await insertBiddingsBatch(result.biddings);
+        const convertedItems = result.items.map(convertToInsertBidding);
+        const { saved, duplicates } = await insertBiddingsBatch(convertedItems);
 
         // ログ更新
         await updateScrapingLog(logId, {
           finishedAt: new Date(),
           status: "success",
-          itemsScraped: result.itemsScraped,
+          itemsScraped: result.totalCount,
           newItems: saved,
         });
 
         return {
           success: true,
-          itemsScraped: result.itemsScraped,
+          itemsScraped: result.totalCount,
           newItems: saved,
           duplicates,
         };
@@ -176,6 +248,92 @@ export const appRouter = router({
         throw error;
       }
     }),
+
+    // 詳細検索条件付きスクレイピング実行
+    executeWithConditions: protectedProcedure
+      .input(
+        z.object({
+          projectType: z.array(z.string()).optional(),
+          titleKeyword: z.string().optional(),
+          location: z.string().optional(),
+          constructionNo: z.string().optional(),
+          estimatedPriceMin: z.number().optional(),
+          estimatedPriceMax: z.number().optional(),
+          rating: z.array(z.string()).optional(),
+          fetchDetails: z.boolean().default(false),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const startedAt = new Date();
+
+        // ログ作成
+        const logId = await insertScrapingLog({
+          userId: ctx.user.id,
+          executionType: "manual",
+          startedAt,
+          status: "running",
+        });
+
+        try {
+          // 検索条件を準備
+          const conditions: SearchConditions = {
+            useLatestAnnouncement: false,
+            projectType: input.projectType,
+            titleKeyword: input.titleKeyword,
+            location: input.location,
+            constructionNo: input.constructionNo,
+            estimatedPriceMin: input.estimatedPriceMin,
+            estimatedPriceMax: input.estimatedPriceMax,
+            rating: input.rating,
+          };
+
+          // スクレイピング実行
+          const result = await scrapeMieBiddings(conditions, input.fetchDetails);
+
+          if (!result.success) {
+            // 失敗
+            await updateScrapingLog(logId, {
+              finishedAt: new Date(),
+              status: "failed",
+              errorMessage: result.errorMessage,
+            });
+
+            return {
+              success: false,
+              error: result.errorMessage,
+            };
+          }
+
+          // データベースに保存
+          const convertedItems = result.items.map(convertToInsertBidding);
+          const { saved, duplicates } = await insertBiddingsBatch(convertedItems);
+
+          // ログ更新
+          await updateScrapingLog(logId, {
+            finishedAt: new Date(),
+            status: "success",
+            itemsScraped: result.totalCount,
+            newItems: saved,
+          });
+
+          return {
+            success: true,
+            itemsScraped: result.totalCount,
+            newItems: saved,
+            duplicates,
+          };
+        } catch (error) {
+          // 予期しないエラー
+          await updateScrapingLog(logId, {
+            finishedAt: new Date(),
+            status: "failed",
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorDetails: error instanceof Error ? error.stack : undefined,
+          });
+
+          throw error;
+        }
+      }),
 
     // スクレイピング履歴取得
     getLogs: protectedProcedure

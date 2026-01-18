@@ -15,6 +15,13 @@
       "when": 1768610810046,
       "tag": "0001_fantastic_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768718466157,
+      "tag": "0002_peaceful_romulus",
+      "breakpoints": true
     }
   ]
 }

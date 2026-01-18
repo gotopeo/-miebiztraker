@@ -1,32 +1,89 @@
-import { Builder, By, until, WebDriver } from "selenium-webdriver";
+import { Builder, By, until, WebDriver, WebElement } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
-import { InsertBidding, biddings as biddingsTable } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
 
 /**
- * 三重県入札情報サイトのスクレイパー
- * 実際のサイト構造に完全対応（最終版）
+ * 検索条件インターフェース
  */
-
-const MIE_BIDDING_URL = "https://mie.efftis.jp/24000/ppi/pub";
-
-export interface ScraperResult {
-  success: boolean;
-  itemsScraped: number;
-  newItems: number;
-  biddings: InsertBidding[];
-  error?: string;
-  errorDetails?: string;
+export interface SearchConditions {
+  /** 発注区分（電子入札/紙入札/全て） */
+  orderType?: string;
+  /** 入札方式 */
+  biddingMethod?: string;
+  /** 区分（工事/委託） */
+  projectType?: string[];
+  /** 種別コード（カンマ区切り） */
+  categoryCodes?: string;
+  /** 格付（A/B/C/D/指定なし） */
+  rating?: string[];
+  /** 発注機関コード */
+  organizationCode?: string;
+  /** 履行場所 */
+  location?: string;
+  /** 公告日（From） */
+  publicationDateFrom?: Date;
+  /** 公告日（To） */
+  publicationDateTo?: Date;
+  /** 予定価格（最小） */
+  estimatedPriceMin?: number;
+  /** 予定価格（最大） */
+  estimatedPriceMax?: number;
+  /** 件名キーワード */
+  titleKeyword?: string;
+  /** 施工番号 */
+  constructionNo?: string;
+  /** 最新公告情報を取得（true の場合、他の条件を無視） */
+  useLatestAnnouncement?: boolean;
 }
 
 /**
- * Seleniumでスクレイピングを実行
+ * スクレイピング結果の個別アイテム
  */
-export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
-  let driver: WebDriver | null = null;
+export interface ScrapedBiddingItem {
+  no: string;
+  caseNumber: string;
+  orderOrganName: string;
+  hasQuestion: string;
+  title: string;
+  biddingMethod: string;
+  constructionType: string;
+  rating: string;
+  applicationPeriod: string;
+  status: string;
+  detailUrl?: string;
+  // 詳細情報（詳細ページから取得）
+  estimatedPrice?: number;
+  location?: string;
+  constructionPeriod?: string;
+  publicationDate?: Date;
+  biddingDate?: Date;
+  applicationDeadline?: Date;
+  remarks?: string;
+}
 
-  try {
-    // Chrome オプションの設定
+/**
+ * スクレイピング結果
+ */
+export interface ScraperResult {
+  success: boolean;
+  items: ScrapedBiddingItem[];
+  totalCount: number;
+  errorMessage?: string;
+}
+
+/**
+ * 三重県入札情報サイトのスクレイパー
+ */
+export class MieBiddingScraper {
+  private driver: WebDriver | null = null;
+  private readonly baseUrl = "https://mie.efftis.jp/24000/ppi/pub";
+  private readonly topPageUrl = "https://www.pref.mie.lg.jp/ebid-mie/83336046773.htm";
+  private readonly maxRetries = 3;
+  private readonly retryDelay = 5000; // 5秒
+
+  /**
+   * WebDriverを初期化
+   */
+  private async initDriver(): Promise<void> {
     const options = new chrome.Options();
     options.addArguments("--headless");
     options.addArguments("--no-sandbox");
@@ -35,260 +92,422 @@ export async function scrapeMieBiddingSite(): Promise<ScraperResult> {
     options.addArguments("--window-size=1920,1080");
 
     // ChromeDriver 128を使用
-    const service = new chrome.ServiceBuilder('/usr/local/bin/chromedriver-128');
+    const service = new chrome.ServiceBuilder("/usr/local/bin/chromedriver-128");
 
-    // WebDriverの初期化
-    driver = await new Builder()
+    this.driver = await new Builder()
       .forBrowser("chrome")
       .setChromeOptions(options)
       .setChromeService(service)
       .build();
 
-    console.log("[Scraper] Starting scraping process...");
+    console.log("[Scraper] WebDriver initialized");
+  }
 
-    // 検索ページにアクセス
-    await driver.get(MIE_BIDDING_URL);
-    console.log("[Scraper] Accessed search page");
+  /**
+   * TOPページから入札情報ページへ遷移
+   */
+  private async navigateFromTopPage(): Promise<void> {
+    if (!this.driver) throw new Error("Driver not initialized");
 
-    // ページの読み込みを待機
-    await driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
-    console.log("[Scraper] Search form loaded");
+    console.log("[Scraper] Navigating from TOP page");
+    await this.driver.get(this.topPageUrl);
+    await this.driver.sleep(2000);
 
-    // 最新公告情報ボタンをJavaScriptで実行
-    await driver.executeScript("LinkSubmit('P004','4','searchBtn');");
-    console.log("[Scraper] Latest bidding info button clicked");
+    try {
+      // 「入札情報（工事・委託）」ボタンを探す
+      const button = await this.driver.findElement(
+        By.xpath("//a[contains(text(), '入札情報') and contains(text(), '工事')]")
+      );
+      await button.click();
+      console.log("[Scraper] Clicked bidding information button");
 
-    // 結果テーブルの表示を十分に待機
-    await driver.sleep(8000);
-    console.log("[Scraper] Waiting for result table...");
+      // 新しいウィンドウに切り替え
+      await this.driver.sleep(2000);
+      const handles = await this.driver.getAllWindowHandles();
+      if (handles.length > 1) {
+        await this.driver.switchTo().window(handles[1]);
+        console.log("[Scraper] Switched to new window");
+      }
 
-    // すべてのテーブルを取得
-    const tables = await driver.findElements(By.css("table"));
-    console.log(`[Scraper] Found ${tables.length} tables`);
+      await this.driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
+      console.log("[Scraper] Successfully navigated to bidding page");
+    } catch (error) {
+      console.warn("[Scraper] Failed to navigate from TOP page, accessing directly");
+      await this.driver.get(this.baseUrl);
+      await this.driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
+    }
+  }
 
-    if (tables.length === 0) {
-      return {
-        success: false,
-        itemsScraped: 0,
-        newItems: 0,
-        biddings: [],
-        error: "No tables found on page",
-      };
+  /**
+   * 検索条件を設定
+   */
+  private async setSearchConditions(conditions: SearchConditions): Promise<void> {
+    if (!this.driver) throw new Error("Driver not initialized");
+
+    console.log("[Scraper] Setting search conditions:", JSON.stringify(conditions, null, 2));
+
+    // 区分（工事/委託）
+    if (conditions.projectType && conditions.projectType.length > 0) {
+      if (conditions.projectType.includes("工事")) {
+        const checkbox = await this.driver.findElement(By.name("ankenKbn1"));
+        if (!(await checkbox.isSelected())) {
+          await checkbox.click();
+        }
+      }
+      if (conditions.projectType.includes("委託")) {
+        const checkbox = await this.driver.findElement(By.name("ankenKbn2"));
+        if (!(await checkbox.isSelected())) {
+          await checkbox.click();
+        }
+      }
     }
 
-    // 結果テーブルを特定（ヘッダー行に「案件名称」を含むテーブル）
-    let resultTable = null;
-    
+    // 件名キーワード
+    if (conditions.titleKeyword) {
+      const input = await this.driver.findElement(By.name("subjectName"));
+      await input.clear();
+      await input.sendKeys(conditions.titleKeyword);
+    }
+
+    // 履行場所
+    if (conditions.location) {
+      const input = await this.driver.findElement(By.name("performLocation"));
+      await input.clear();
+      await input.sendKeys(conditions.location);
+    }
+
+    // 施工番号
+    if (conditions.constructionNo) {
+      const input = await this.driver.findElement(By.name("constructionNo"));
+      await input.clear();
+      await input.sendKeys(conditions.constructionNo);
+    }
+
+    // 予定価格
+    if (conditions.estimatedPriceMin) {
+      const input = await this.driver.findElement(By.name("estimatePriceFrom"));
+      await input.clear();
+      await input.sendKeys(conditions.estimatedPriceMin.toString());
+    }
+    if (conditions.estimatedPriceMax) {
+      const input = await this.driver.findElement(By.name("estimatePriceTo"));
+      await input.clear();
+      await input.sendKeys(conditions.estimatedPriceMax.toString());
+    }
+
+    console.log("[Scraper] Search conditions set successfully");
+  }
+
+  /**
+   * 検索を実行
+   */
+  private async executeSearch(useLatest: boolean = true): Promise<void> {
+    if (!this.driver) throw new Error("Driver not initialized");
+
+    if (useLatest) {
+      // 最新公告情報ボタンを実行
+      console.log("[Scraper] Executing latest announcement search");
+      await this.driver.executeScript("LinkSubmit('P004','4','searchBtn');");
+    } else {
+      // 通常の検索実行
+      console.log("[Scraper] Executing normal search");
+      await this.driver.executeScript("LinkSubmit('P004','2','searchBtn');");
+    }
+
+    // ページ遷移を待機
+    await this.driver.sleep(8000);
+    console.log("[Scraper] Search executed");
+  }
+
+  /**
+   * 結果テーブルを特定
+   */
+  private async findResultTable(): Promise<WebElement | null> {
+    if (!this.driver) throw new Error("Driver not initialized");
+
+    const tables = await this.driver.findElements(By.css("table"));
+    console.log(`[Scraper] Found ${tables.length} tables`);
+
     for (const table of tables) {
       try {
         const firstRow = await table.findElement(By.css("tr"));
         const headerText = await firstRow.getText();
         
         if (headerText.includes("案件名称") && headerText.includes("発注機関")) {
-          resultTable = table;
-          console.log("[Scraper] Found result table with header:", headerText.substring(0, 100));
-          break;
+          console.log(`[Scraper] Found result table with header: ${headerText.substring(0, 50)}`);
+          return table;
         }
       } catch (error) {
-        // このテーブルにはtr要素がない、次へ
         continue;
       }
     }
 
-    if (!resultTable) {
-      console.log("[Scraper] Result table not found, using largest table as fallback");
-      // フォールバック: 最も行数が多いテーブルを使用
-      let maxRows = 0;
-      for (const table of tables) {
-        const rows = await table.findElements(By.css("tr"));
-        if (rows.length > maxRows) {
-          maxRows = rows.length;
-          resultTable = table;
-        }
-      }
-    }
+    return null;
+  }
 
-    if (!resultTable) {
-      return {
-        success: false,
-        itemsScraped: 0,
-        newItems: 0,
-        biddings: [],
-        error: "Could not identify result table",
-      };
-    }
-
-    const rows = await resultTable.findElements(By.css("tr"));
+  /**
+   * テーブルからデータを抽出
+   */
+  private async extractDataFromTable(table: WebElement): Promise<ScrapedBiddingItem[]> {
+    const items: ScrapedBiddingItem[] = [];
+    const rows = await table.findElements(By.css("tr"));
     console.log(`[Scraper] Found ${rows.length} rows in result table`);
 
-    const biddings: InsertBidding[] = [];
-
-    // ヘッダー行をスキップして各行をパース
     for (let i = 1; i < rows.length; i++) {
       try {
-        const cells = await rows[i].findElements(By.css("td, th"));
-        
+        const cells = await rows[i].findElements(By.css("td"));
         if (cells.length < 9) {
           console.log(`[Scraper] Row ${i} has only ${cells.length} cells, skipping`);
           continue;
         }
 
-        // セルのテキストを取得
         const cellTexts = await Promise.all(
-          cells.map((cell) => cell.getText())
+          cells.map(cell => cell.getText())
         );
 
-        // 空行をスキップ
-        const no = cellTexts[0]?.trim();
-        if (!no || no === "") {
-          continue;
-        }
-
-        console.log(`[Scraper] Row ${i}: No=${no}, Organ=${cellTexts[1]?.substring(0, 30)}`);
-
-        // データ構造:
-        // 0: No
-        // 1: 発注機関施行番号（連結、例: "伊勢建設事務所50705317"）
-        // 2: 質問有無
-        // 3: 案件名称
-        // 4: 入札方式等
-        // 5: 種別
-        // 6: 格付
-        // 7: 参加申請期間
-        // 8: 受付状況
-
-        // 発注機関と施行番号を分割（数字8桁を施行番号として抽出）
-        const organAndNumber = (cellTexts[1] || "").trim();
-        const numberMatch = organAndNumber.match(/(\d{8})$/);
-        const caseNumber = numberMatch ? numberMatch[1] : "";
-        const orderOrganName = numberMatch 
-          ? organAndNumber.substring(0, organAndNumber.length - 8)
+        // 発注機関と施行番号を分割
+        const organAndNumber = cellTexts[1].trim();
+        const match = organAndNumber.match(/(\d{8})$/);
+        const caseNumber = match ? match[1] : "";
+        const orderOrganName = match 
+          ? organAndNumber.substring(0, organAndNumber.length - 8).trim()
           : organAndNumber;
 
-        // 案件名称
-        const title = (cellTexts[3] || "").trim();
+        console.log(`[Scraper] Row ${i}: No=${cellTexts[0].trim()}, Organ=${orderOrganName}, CaseNo=${caseNumber}`);
 
-        // 参加申請期間から日付を抽出
-        const applicationPeriod = (cellTexts[7] || "").trim();
-        const biddingDate = parseApplicationPeriod(applicationPeriod);
+        // 詳細ページURLを取得
+        let detailUrl = "";
+        try {
+          const link = await cells[3].findElement(By.css("a"));
+          detailUrl = await link.getAttribute("href");
+        } catch (error) {
+          // リンクがない場合はスキップ
+        }
 
-        const bidding: InsertBidding = {
+        items.push({
+          no: cellTexts[0].trim(),
           caseNumber,
-          title,
           orderOrganName,
-          biddingMethod: (cellTexts[4] || "").trim(),
-          constructionType: (cellTexts[5] || "").trim(),
-          location: (cellTexts[6] || "").trim(), // 格付
-          constructionPeriod: applicationPeriod,
-          biddingDate,
-          status: (cellTexts[8] || "公告中").trim(),
-          rawData: JSON.stringify(cellTexts),
-          isNew: true,
-          notified: false,
+          hasQuestion: cellTexts[2].trim(),
+          title: cellTexts[3].trim(),
+          biddingMethod: cellTexts[4].trim(),
+          constructionType: cellTexts[5].trim(),
+          rating: cellTexts[6].trim(),
+          applicationPeriod: cellTexts[7].trim(),
+          status: cellTexts[8].trim(),
+          detailUrl: detailUrl || undefined,
+        });
+      } catch (error) {
+        console.error(`[Scraper] Error extracting row ${i}:`, error);
+        continue;
+      }
+    }
+
+    return items;
+  }
+
+  /**
+   * 次ページが存在するかチェック
+   */
+  private async hasNextPage(): Promise<boolean> {
+    if (!this.driver) return false;
+
+    try {
+      const nextPageLinks = await this.driver.findElements(
+        By.xpath("//a[contains(text(), '次ページ')]")
+      );
+      return nextPageLinks.length > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * 次ページへ遷移
+   */
+  private async goToNextPage(): Promise<void> {
+    if (!this.driver) throw new Error("Driver not initialized");
+
+    console.log("[Scraper] Navigating to next page");
+    const nextPageLink = await this.driver.findElement(
+      By.xpath("//a[contains(text(), '次ページ')]")
+    );
+    await nextPageLink.click();
+    await this.driver.sleep(5000);
+  }
+
+  /**
+   * 個別案件の詳細情報を取得
+   */
+  private async fetchDetailInfo(item: ScrapedBiddingItem): Promise<void> {
+    if (!this.driver || !item.detailUrl) return;
+
+    try {
+      console.log(`[Scraper] Fetching detail for case ${item.caseNumber}`);
+      
+      // 現在のウィンドウハンドルを保存
+      const mainWindow = await this.driver.getWindowHandle();
+      
+      // 新しいタブで詳細ページを開く
+      await this.driver.executeScript(`window.open('${item.detailUrl}', '_blank');`);
+      await this.driver.sleep(2000);
+      
+      // 新しいタブに切り替え
+      const handles = await this.driver.getAllWindowHandles();
+      await this.driver.switchTo().window(handles[handles.length - 1]);
+      
+      // 詳細情報を抽出（実装は省略、必要に応じて追加）
+      // TODO: 詳細ページの構造に応じて実装
+      
+      // タブを閉じて元のウィンドウに戻る
+      await this.driver.close();
+      await this.driver.switchTo().window(mainWindow);
+      
+      console.log(`[Scraper] Detail fetched for case ${item.caseNumber}`);
+    } catch (error) {
+      console.error(`[Scraper] Error fetching detail for case ${item.caseNumber}:`, error);
+    }
+  }
+
+  /**
+   * スクレイピングを実行
+   */
+  async scrape(conditions: SearchConditions = {}, fetchDetails: boolean = false): Promise<ScraperResult> {
+    let retryCount = 0;
+
+    while (retryCount < this.maxRetries) {
+      try {
+        // WebDriverを初期化
+        await this.initDriver();
+
+        // TOPページから遷移するか、直接アクセス
+        if (conditions.useLatestAnnouncement) {
+          await this.driver!.get(this.baseUrl);
+          await this.driver!.wait(until.elementLocated(By.id("searchBtn")), 15000);
+        } else {
+          await this.navigateFromTopPage();
+        }
+
+        // 検索条件を設定
+        if (!conditions.useLatestAnnouncement) {
+          await this.setSearchConditions(conditions);
+        }
+
+        // 検索を実行
+        await this.executeSearch(conditions.useLatestAnnouncement ?? true);
+
+        // 全ページのデータを収集
+        const allItems: ScrapedBiddingItem[] = [];
+        let pageCount = 1;
+
+        do {
+          console.log(`[Scraper] Processing page ${pageCount}`);
+          
+          // 結果テーブルを特定
+          const resultTable = await this.findResultTable();
+          if (!resultTable) {
+            throw new Error("Result table not found");
+          }
+
+          // データを抽出
+          const pageItems = await this.extractDataFromTable(resultTable);
+          allItems.push(...pageItems);
+
+          // 詳細情報を取得（オプション）
+          if (fetchDetails) {
+            for (const item of pageItems) {
+              await this.fetchDetailInfo(item);
+            }
+          }
+
+          // 次ページがあるかチェック
+          if (await this.hasNextPage()) {
+            await this.goToNextPage();
+            pageCount++;
+          } else {
+            break;
+          }
+        } while (true);
+
+        console.log(`[Scraper] Successfully scraped ${allItems.length} items from ${pageCount} pages`);
+
+        return {
+          success: true,
+          items: allItems,
+          totalCount: allItems.length,
         };
 
-        // 案件番号と案件名が存在する場合のみ追加
-        if (bidding.caseNumber && bidding.title) {
-          biddings.push(bidding);
-        } else {
-          console.log(`[Scraper] Row ${i} missing required data, skipping`);
-        }
       } catch (error) {
-        console.error(`[Scraper] Error parsing row ${i}:`, error);
+        retryCount++;
+        console.error(`[Scraper] Error (attempt ${retryCount}/${this.maxRetries}):`, error);
+
+        if (retryCount < this.maxRetries) {
+          console.log(`[Scraper] Retrying in ${this.retryDelay / 1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        } else {
+          return {
+            success: false,
+            items: [],
+            totalCount: 0,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          };
+        }
+      } finally {
+        // WebDriverをクローズ
+        if (this.driver) {
+          try {
+            await this.driver.quit();
+            console.log("[Scraper] WebDriver closed");
+          } catch (error) {
+            console.error("[Scraper] Error closing WebDriver:", error);
+          }
+          this.driver = null;
+        }
       }
     }
 
-    console.log(`[Scraper] Successfully scraped ${biddings.length} items`);
-
-    return {
-      success: true,
-      itemsScraped: biddings.length,
-      newItems: biddings.length,
-      biddings,
-    };
-  } catch (error) {
-    console.error("[Scraper] Error during scraping:", error);
     return {
       success: false,
-      itemsScraped: 0,
-      newItems: 0,
-      biddings: [],
-      error: error instanceof Error ? error.message : String(error),
-      errorDetails: error instanceof Error ? error.stack : undefined,
+      items: [],
+      totalCount: 0,
+      errorMessage: "Max retries exceeded",
     };
-  } finally {
-    if (driver) {
-      try {
-        await driver.quit();
-        console.log("[Scraper] WebDriver closed");
-      } catch (error) {
-        console.error("[Scraper] Error closing WebDriver:", error);
-      }
-    }
   }
 }
 
 /**
- * 参加申請期間から入札日を抽出
- * 例: "R8/1/16 8:30 ～R8/1/29 12:00" → 終了日をDate型に変換
+ * スクレイピングを実行する関数（エクスポート用）
  */
-function parseApplicationPeriod(periodStr: string): Date | undefined {
-  try {
-    if (!periodStr) return undefined;
-
-    // 終了日を抽出（～の後）
-    const match = periodStr.match(/～\s*R(\d+)\/(\d+)\/(\d+)/);
-    if (match) {
-      const reiwaYear = parseInt(match[1]);
-      const month = parseInt(match[2]);
-      const day = parseInt(match[3]);
-      
-      // 令和→西暦変換（令和元年=2019年）
-      const year = reiwaYear + 2018;
-      
-      return new Date(year, month - 1, day);
-    }
-
-    return undefined;
-  } catch (error) {
-    console.error("[Scraper] Error parsing application period:", periodStr, error);
-    return undefined;
-  }
+export async function scrapeMieBiddings(
+  conditions: SearchConditions = {},
+  fetchDetails: boolean = false
+): Promise<ScraperResult> {
+  const scraper = new MieBiddingScraper();
+  return await scraper.scrape(conditions, fetchDetails);
 }
 
 /**
- * スクレイピング結果をデータベースに保存
- * 重複チェックを行い、新規のみ保存
+ * ScrapedBiddingItemをInsertBiddingに変換
  */
-export async function saveBiddingsToDb(
-  biddings: InsertBidding[],
-  db: any
-): Promise<{ saved: number; duplicates: number }> {
-  let saved = 0;
-  let duplicates = 0;
-
-  for (const bidding of biddings) {
-    try {
-      // 案件番号で重複チェック
-      const existing = await db
-        .select()
-        .from(biddingsTable)
-        .where(eq(biddingsTable.caseNumber, bidding.caseNumber))
-        .limit(1);
-
-      if (existing.length === 0) {
-        await db.insert(biddingsTable).values(bidding);
-        saved++;
-      } else {
-        duplicates++;
-      }
-    } catch (error) {
-      console.error(
-        `[Scraper] Error saving bidding ${bidding.caseNumber}:`,
-        error
-      );
-    }
-  }
-
-  return { saved, duplicates };
+export function convertToInsertBidding(item: ScrapedBiddingItem): any {
+  return {
+    caseNumber: item.caseNumber,
+    title: item.title,
+    orderOrganName: item.orderOrganName,
+    biddingMethod: item.biddingMethod,
+    constructionType: item.constructionType,
+    rating: item.rating,
+    applicationPeriod: item.applicationPeriod,
+    status: item.status,
+    hasQuestion: item.hasQuestion,
+    detailUrl: item.detailUrl,
+    estimatedPrice: item.estimatedPrice ? item.estimatedPrice.toString() : null,
+    location: item.location,
+    constructionPeriod: item.constructionPeriod,
+    publicationDate: item.publicationDate,
+    biddingDate: item.biddingDate,
+    applicationDeadline: item.applicationDeadline,
+    remarks: item.remarks,
+    rawData: JSON.stringify(item),
+  };
 }
