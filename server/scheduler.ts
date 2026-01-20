@@ -148,11 +148,9 @@ async function registerSchedule(scheduleConfig: {
       console.log(`[Scheduler] Next execution: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
       
       // 次回実行時刻をデータベースに保存（非同期）
-      // nextExecはUTCのため、JSTに変換して保存
+      // nextExecはUTCタイムスタンプなので、そのまま保存
       if (nextExec) {
-        // UTCの時刻をJSTに変換（9時間足す）
-        const jstNextExec = new Date(nextExec.getTime() + 9 * 60 * 60 * 1000);
-        updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: jstNextExec }).catch(err => {
+        updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: nextExec }).catch(err => {
           console.error('[Scheduler] Failed to update nextExecutionAt:', err);
         });
       }
