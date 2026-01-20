@@ -48,6 +48,7 @@ export const appRouter = router({
           startDate: z.string().optional(), // ISO date string
           endDate: z.string().optional(),
           status: z.string().optional(),
+          newItemsFilter: z.enum(["24h", "7d", "30d"]).optional(),
           page: z.number().default(1),
           pageSize: z.number().default(50),
         })
@@ -62,6 +63,7 @@ export const appRouter = router({
             startDate: input.startDate ? new Date(input.startDate) : undefined,
             endDate: input.endDate ? new Date(input.endDate) : undefined,
             status: input.status,
+            newItemsFilter: input.newItemsFilter,
             limit: input.pageSize,
             offset,
           }),
@@ -71,6 +73,7 @@ export const appRouter = router({
             startDate: input.startDate ? new Date(input.startDate) : undefined,
             endDate: input.endDate ? new Date(input.endDate) : undefined,
             status: input.status,
+            newItemsFilter: input.newItemsFilter,
           }),
         ]);
 

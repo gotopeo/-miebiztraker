@@ -115,6 +115,7 @@ export async function searchBiddings(params: {
   startDate?: Date;
   endDate?: Date;
   status?: string;
+  newItemsFilter?: "24h" | "7d" | "30d";
   limit?: number;
   offset?: number;
 }): Promise<Bidding[]> {
@@ -141,6 +142,25 @@ export async function searchBiddings(params: {
 
   if (params.status) {
     conditions.push(eq(biddings.status, params.status));
+  }
+
+  if (params.newItemsFilter) {
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (params.newItemsFilter) {
+      case "24h":
+        cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case "7d":
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "30d":
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+    }
+    
+    conditions.push(gte(biddings.firstScrapedAt, cutoffDate));
   }
 
   let query = db
@@ -172,6 +192,7 @@ export async function countBiddings(params: {
   startDate?: Date;
   endDate?: Date;
   status?: string;
+  newItemsFilter?: "24h" | "7d" | "30d";
 }): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
@@ -198,9 +219,26 @@ export async function countBiddings(params: {
     conditions.push(eq(biddings.status, params.status));
   }
 
-  let query = db
-    .select({ count: sql<number>`count(*)` })
-    .from(biddings);
+  if (params.newItemsFilter) {
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (params.newItemsFilter) {
+      case "24h":
+        cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case "7d":
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "30d":
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+    }
+    
+    conditions.push(gte(biddings.firstScrapedAt, cutoffDate));
+  }
+
+  let query = db.select({ count: sql<number>`count(*)` }).from(biddings);
 
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -252,9 +290,22 @@ export async function insertBiddingsBatch(
         .limit(1);
 
       if (existing.length === 0) {
-        await db.insert(biddings).values(bidding);
+        // 新規案件の場合、firstScrapedAtを設定
+        await db.insert(biddings).values({
+          ...bidding,
+          firstScrapedAt: new Date(),
+        });
         saved++;
       } else {
+        // 既存案件の場合、情報を更新（firstScrapedAtは保持）
+        const updateData: any = { ...bidding };
+        delete updateData.caseNumber; // キーフィールドは更新しない
+        delete updateData.firstScrapedAt; // 初回取得日時は保持
+        
+        await db
+          .update(biddings)
+          .set(updateData)
+          .where(eq(biddings.caseNumber, bidding.caseNumber));
         duplicates++;
       }
     } catch (error) {

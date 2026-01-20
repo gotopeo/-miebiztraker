@@ -23,6 +23,7 @@ export default function BiddingList() {
   const [orderOrganCode, setOrderOrganCode] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [newItemsFilter, setNewItemsFilter] = useState<"all" | "24h" | "7d" | "30d">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
   
@@ -35,6 +36,7 @@ export default function BiddingList() {
       orderOrganCode: orderOrganCode || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
       page,
       pageSize,
     },
@@ -232,6 +234,20 @@ export default function BiddingList() {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
+              <div>
+                <Label htmlFor="newItemsFilter">新着フィルター</Label>
+                <select
+                  id="newItemsFilter"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={newItemsFilter}
+                  onChange={(e) => setNewItemsFilter(e.target.value as any)}
+                >
+                  <option value="all">すべて</option>
+                  <option value="24h">過去24時間</option>
+                  <option value="7d">過去7日間</option>
+                  <option value="30d">過去30日間</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-2 mt-4">
               <Button onClick={handleSearch} disabled={isLoading}>
@@ -295,24 +311,44 @@ export default function BiddingList() {
                         <TableHead>格付</TableHead>
                         <TableHead>状態</TableHead>
                         <TableHead>入札日</TableHead>
+                        <TableHead>取得日</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-mono text-sm">{item.caseNumber}</TableCell>
-                          <TableCell className="max-w-md">{item.title}</TableCell>
-                          <TableCell>{item.orderOrganName || "-"}</TableCell>
-                          <TableCell>{item.biddingMethod || "-"}</TableCell>
-                          <TableCell>{item.rating || "-"}</TableCell>
-                          <TableCell>{item.status || "-"}</TableCell>
-                          <TableCell>
-                            {item.biddingDate
-                              ? new Date(item.biddingDate).toLocaleDateString("ja-JP")
-                              : "-"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {data.items.map((item) => {
+                        const isNew = item.firstScrapedAt && 
+                          (Date.now() - new Date(item.firstScrapedAt).getTime()) < 24 * 60 * 60 * 1000;
+                        
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-mono text-sm">{item.caseNumber}</TableCell>
+                            <TableCell className="max-w-md">
+                              <div className="flex items-center gap-2">
+                                {item.title}
+                                {isNew && (
+                                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
+                                    新着
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{item.orderOrganName || "-"}</TableCell>
+                            <TableCell>{item.biddingMethod || "-"}</TableCell>
+                            <TableCell>{item.rating || "-"}</TableCell>
+                            <TableCell>{item.status || "-"}</TableCell>
+                            <TableCell>
+                              {item.biddingDate
+                                ? new Date(item.biddingDate).toLocaleDateString("ja-JP")
+                                : "-"}
+                            </TableCell>
+                            <TableCell>
+                              {item.firstScrapedAt
+                                ? new Date(item.firstScrapedAt).toLocaleDateString("ja-JP")
+                                : "-"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

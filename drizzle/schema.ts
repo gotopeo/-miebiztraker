@@ -74,6 +74,8 @@ export const biddings = mysqlTable("biddings", {
   isNew: boolean("isNew").default(true).notNull(),
   /** 通知済みフラグ */
   notified: boolean("notified").default(false).notNull(),
+  /** 初回取得日時（スクレイピングで初めて取得された日時） */
+  firstScrapedAt: timestamp("firstScrapedAt"),
   /** 作成日時 */
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   /** 更新日時 */
