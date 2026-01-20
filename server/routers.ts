@@ -102,16 +102,19 @@ export const appRouter = router({
           startDate: z.string().optional(),
           endDate: z.string().optional(),
           status: z.string().optional(),
+          newItemsFilter: z.enum(["24h", "7d", "30d"]).optional(),
         })
       )
       .query(async ({ input }) => {
         // 全件取得（上限1000件）
+        console.log("[exportCsv] Received input:", JSON.stringify(input));
         const items = await searchBiddings({
           keyword: input.keyword,
           orderOrganCode: input.orderOrganCode,
           startDate: input.startDate ? new Date(input.startDate) : undefined,
           endDate: input.endDate ? new Date(input.endDate) : undefined,
           status: input.status,
+          newItemsFilter: input.newItemsFilter,
           limit: 1000,
         });
 
@@ -127,6 +130,7 @@ export const appRouter = router({
           startDate: z.string().optional(),
           endDate: z.string().optional(),
           status: z.string().optional(),
+          newItemsFilter: z.enum(["24h", "7d", "30d"]).optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -137,6 +141,7 @@ export const appRouter = router({
           startDate: input.startDate ? new Date(input.startDate) : undefined,
           endDate: input.endDate ? new Date(input.endDate) : undefined,
           status: input.status,
+          newItemsFilter: input.newItemsFilter,
           limit: 10000,
         });
 

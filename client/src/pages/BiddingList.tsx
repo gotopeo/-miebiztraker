@@ -45,17 +45,7 @@ export default function BiddingList() {
     }
   );
 
-  const exportCsvQuery = trpc.biddings.exportCsv.useQuery(
-    {
-      keyword: keyword || undefined,
-      orderOrganCode: orderOrganCode || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-    },
-    {
-      enabled: false,
-    }
-  );
+  const utils = trpc.useUtils();
 
   const exportExcelMutation = trpc.biddings.exportExcel.useMutation();
 
@@ -71,6 +61,7 @@ export default function BiddingList() {
         orderOrganCode: orderOrganCode || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
       });
 
       if (!result.success) {
@@ -106,8 +97,16 @@ export default function BiddingList() {
 
   const handleExportCsv = async () => {
     try {
-      const result = await exportCsvQuery.refetch();
-      if (!result.data) {
+      const params = {
+        keyword: keyword || undefined,
+        orderOrganCode: orderOrganCode || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
+      };
+      console.log("CSV Export params:", params);
+      const result = await utils.biddings.exportCsv.fetch(params);
+      if (!result) {
         toast.error("データの取得に失敗しました");
         return;
       }
@@ -121,7 +120,7 @@ export default function BiddingList() {
         "予定価格",
         "状態",
       ];
-      const rows = result.data.map((item) => [
+      const rows = result.map((item) => [
         item.caseNumber,
         item.title,
         item.orderOrganName || "",
@@ -257,7 +256,6 @@ export default function BiddingList() {
               <Button
                 variant="outline"
                 onClick={handleExportCsv}
-                disabled={exportCsvQuery.isFetching}
               >
                 <Download className="h-4 w-4 mr-2" />
                 CSVエクスポート
