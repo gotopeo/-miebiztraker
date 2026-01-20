@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeScheduler, shutdownScheduler } from "../scheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -57,8 +58,28 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // スケジューラーを初期化
+    await initializeScheduler();
+  });
+  
+  // サーバー終了時にスケジューラーをシャットダウン
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    shutdownScheduler();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received: closing HTTP server');
+    shutdownScheduler();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
   });
 }
 

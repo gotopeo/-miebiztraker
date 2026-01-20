@@ -1,0 +1,201 @@
+import * as schedule from 'node-schedule';
+import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from './scraper';
+import { insertBiddingsBatch, insertScrapingLog } from './db';
+
+/**
+ * スケジューラーサービス
+ * データベースに保存されたスケジュール設定に基づいて、定期的にスクレイピングを実行する
+ */
+
+// アクティブなスケジュールジョブを管理
+const activeJobs = new Map<number, schedule.Job>();
+
+/**
+ * スケジューラーを初期化し、データベースからスケジュール設定を読み込んで登録
+ */
+export async function initializeScheduler() {
+  console.log('[Scheduler] Initializing scheduler...');
+  
+  try {
+    // TODO: データベースからスケジュール設定を読み込む
+    const schedules: any[] = []; // await getActiveSchedules();
+    
+    if (!schedules || schedules.length === 0) {
+      console.log('[Scheduler] No active schedules found. Creating default schedule (daily at 9:00 AM)...');
+      await createDefaultSchedule();
+      return;
+    }
+    
+    for (const scheduleConfig of schedules) {
+      registerSchedule(scheduleConfig);
+    }
+    
+    console.log(`[Scheduler] Initialized with ${schedules.length} active schedule(s)`);
+  } catch (error) {
+    console.error('[Scheduler] Failed to initialize:', error);
+  }
+}
+
+/**
+ * デフォルトスケジュール（毎日午前9時）を作成
+ */
+async function createDefaultSchedule() {
+  // この関数は将来的にデータベースにデフォルトスケジュールを挿入する
+  // 現在は直接スケジュールを登録
+  const defaultSchedule = {
+    id: 0, // 仮のID
+    userId: 0,
+    name: 'デフォルト（毎日午前9時）',
+    cronExpression: '0 9 * * *', // 毎日午前9時
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  registerSchedule(defaultSchedule);
+  console.log('[Scheduler] Default schedule registered: Daily at 9:00 AM');
+}
+
+/**
+ * スケジュールを登録
+ */
+function registerSchedule(scheduleConfig: {
+  id: number;
+  name: string;
+  cronExpression: string;
+  isActive: boolean;
+}) {
+  if (!scheduleConfig.isActive) {
+    console.log(`[Scheduler] Schedule "${scheduleConfig.name}" is inactive, skipping`);
+    return;
+  }
+  
+  // 既存のジョブがあれば削除
+  if (activeJobs.has(scheduleConfig.id)) {
+    const existingJob = activeJobs.get(scheduleConfig.id);
+    existingJob?.cancel();
+    activeJobs.delete(scheduleConfig.id);
+  }
+  
+  try {
+    const job = schedule.scheduleJob(scheduleConfig.cronExpression, async () => {
+      console.log(`[Scheduler] Executing scheduled scraping: ${scheduleConfig.name}`);
+      await executeScheduledScraping(scheduleConfig.id, scheduleConfig.name);
+    });
+    
+    if (job) {
+      activeJobs.set(scheduleConfig.id, job);
+      console.log(`[Scheduler] Registered schedule: ${scheduleConfig.name} (${scheduleConfig.cronExpression})`);
+      console.log(`[Scheduler] Next execution: ${job.nextInvocation()?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+    } else {
+      console.error(`[Scheduler] Failed to create job for schedule: ${scheduleConfig.name}`);
+    }
+  } catch (error) {
+    console.error(`[Scheduler] Failed to register schedule "${scheduleConfig.name}":`, error);
+  }
+}
+
+/**
+ * スケジュールされたスクレイピングを実行
+ */
+async function executeScheduledScraping(scheduleId: number, scheduleName: string) {
+  const startTime = Date.now();
+  let status: 'success' | 'running' | 'failed' = 'success';
+  let errorMessage: string | null = null;
+  let itemsCount = 0;
+  
+  try {
+    console.log(`[Scheduler] Starting scraping for schedule: ${scheduleName}`);
+    
+    const conditions: SearchConditions = {
+      useLatestAnnouncement: true, // 最新公告情報を取得
+    };
+    
+    const result = await scrapeMieBiddings(conditions, false); // 詳細情報は取得しない
+    itemsCount = result.items.length;
+    
+    if (itemsCount > 0) {
+      const insertItems = result.items.map(convertToInsertBidding);
+      await insertBiddingsBatch(insertItems);
+      console.log(`[Scheduler] Successfully scraped and saved ${itemsCount} items`);
+    } else {
+      console.log('[Scheduler] No items found during scraping');
+    }
+    
+  } catch (error) {
+    status = 'failed';
+    errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[Scheduler] Scraping failed for schedule "${scheduleName}":`, error);
+  } finally {
+    const duration = Date.now() - startTime;
+    
+    // スクレイピングログを記録
+    try {
+      await insertScrapingLog({
+        executionType: 'scheduled',
+        startedAt: new Date(startTime),
+        finishedAt: new Date(),
+        status,
+        itemsScraped: itemsCount,
+        newItems: 0, // TODO: 新規件数をカウントするロジックを追加
+        errorMessage,
+      });
+    } catch (logError) {
+      console.error('[Scheduler] Failed to insert scraping log:', logError);
+    }
+  }
+}
+
+/**
+ * スケジュールを更新（既存のジョブをキャンセルして新しいジョブを登録）
+ */
+export function updateSchedule(scheduleConfig: {
+  id: number;
+  name: string;
+  cronExpression: string;
+  isActive: boolean;
+}) {
+  console.log(`[Scheduler] Updating schedule: ${scheduleConfig.name}`);
+  registerSchedule(scheduleConfig);
+}
+
+/**
+ * スケジュールを削除
+ */
+export function removeSchedule(scheduleId: number) {
+  const job = activeJobs.get(scheduleId);
+  if (job) {
+    job.cancel();
+    activeJobs.delete(scheduleId);
+    console.log(`[Scheduler] Removed schedule with ID: ${scheduleId}`);
+  }
+}
+
+/**
+ * すべてのスケジュールをキャンセル
+ */
+export function shutdownScheduler() {
+  console.log('[Scheduler] Shutting down all scheduled jobs...');
+  activeJobs.forEach((job, id) => {
+    job.cancel();
+    console.log(`[Scheduler] Cancelled job with ID: ${id}`);
+  });
+  activeJobs.clear();
+  console.log('[Scheduler] Shutdown complete');
+}
+
+/**
+ * アクティブなスケジュールの情報を取得
+ */
+export function getActiveScheduleInfo() {
+  const info: Array<{ id: number; nextInvocation: Date | null }> = [];
+  
+  activeJobs.forEach((job, id) => {
+    info.push({
+      id,
+      nextInvocation: job.nextInvocation(),
+    });
+  });
+  
+  return info;
+}
