@@ -45,8 +45,7 @@ export default function BiddingList() {
     }
   );
 
-  const utils = trpc.useUtils();
-
+  const exportCsvMutation = trpc.biddings.exportCsv.useMutation();
   const exportExcelMutation = trpc.biddings.exportExcel.useMutation();
 
   const handleSearch = () => {
@@ -97,15 +96,21 @@ export default function BiddingList() {
 
   const handleExportCsv = async () => {
     try {
-      const params = {
+      console.log("[handleExportCsv] newItemsFilter:", newItemsFilter);
+      console.log("[handleExportCsv] Sending params:", {
         keyword: keyword || undefined,
         orderOrganCode: orderOrganCode || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
-      };
-      console.log("CSV Export params:", params);
-      const result = await utils.biddings.exportCsv.fetch(params);
+      });
+      const result = await exportCsvMutation.mutateAsync({
+        keyword: keyword || undefined,
+        orderOrganCode: orderOrganCode || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
+      });
       if (!result) {
         toast.error("データの取得に失敗しました");
         return;

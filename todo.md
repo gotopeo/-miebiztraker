@@ -182,3 +182,13 @@
 - [x] CSVエクスポートAPIに新着フィルターパラメータを追加
 - [x] ExcelエクスポートAPIに新着フィルターパラメータを追加
 - [ ] CSVエクスポート時にフィルターが適用されない問題を修正（未解決）
+
+## CSVエクスポートフィルター適用修正（mutationパターン）
+
+- [x] バックエンドのexportCsv APIをqueryからmutationに変更
+- [x] バックエンドのexportExcel APIをqueryからmutationに変更（既にmutation）
+- [x] フロントエンドのCSVエクスポートをuseMutationに変更
+- [x] フロントエンドのExcelエクスポートをuseMutationに変更（既にuseMutation）
+- [x] デバッグログを追加
+- [ ] ブラウザキャッシュ問題を解決（ハードリロード後も新しいコードが読み込まれない）
+- [ ] テストと動作確認
