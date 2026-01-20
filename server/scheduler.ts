@@ -58,25 +58,47 @@ async function createDefaultSchedule() {
 
 /**
  * scheduleTypeとexecutionTimeからcron式を生成
+ * executionTimeはJST（日本時間）で入力されるため、UTCに変換する
  */
 function generateCronExpression(scheduleConfig: {
   scheduleType: string;
   executionTime: string;
   daysOfWeek?: string | null;
 }): string {
-  const [hours, minutes] = scheduleConfig.executionTime.split(':').map(Number);
+  const [jstHours, minutes] = scheduleConfig.executionTime.split(':').map(Number);
+  
+  // JSTからUTCに変換（9時間引く）
+  let utcHours = jstHours - 9;
+  let dayOffset = 0;
+  
+  if (utcHours < 0) {
+    utcHours += 24;
+    dayOffset = -1; // 前日になる
+  }
   
   switch (scheduleConfig.scheduleType) {
     case 'daily':
-      return `${minutes} ${hours} * * *`;
+      return `${minutes} ${utcHours} * * *`;
     case 'weekly':
-      const days = scheduleConfig.daysOfWeek || '1'; // デフォルトは月曜日
-      return `${minutes} ${hours} * * ${days}`;
+      let days = scheduleConfig.daysOfWeek || '1'; // デフォルトは月曜日
+      
+      // 日付が前日になる場合、曜日を調整
+      if (dayOffset === -1) {
+        const dayArray = days.split(',').map(d => {
+          let day = parseInt(d.trim());
+          day = day - 1;
+          if (day < 0) day = 6; // 日曜日(0)の前は土曜日(6)
+          return day.toString();
+        });
+        days = dayArray.join(',');
+      }
+      
+      return `${minutes} ${utcHours} * * ${days}`;
     case 'custom':
       // customの場合はcronExpressionを使用するので、ここには到達しない
-      return `${minutes} ${hours} * * *`;
+      return `${minutes} ${utcHours} * * *`;
     default:
-      return `${minutes} ${hours} * * *`;
+      return `${minutes} ${utcHours} * * *`;
   }
 }
 
@@ -108,7 +130,13 @@ async function registerSchedule(scheduleConfig: {
   }
   
   try {
-    const job = schedule.scheduleJob(cronExpr, async () => {
+    // node-scheduleのタイムゾーンをUTCに設定
+    const spec: schedule.RecurrenceSpecDateRange = {
+      rule: cronExpr,
+      tz: 'Etc/UTC'
+    };
+    
+    const job = schedule.scheduleJob(spec, async () => {
       console.log(`[Scheduler] Executing scheduled scraping: ${scheduleConfig.name}`);
       await executeScheduledScraping(scheduleConfig.id, scheduleConfig.name);
     });
@@ -120,8 +148,11 @@ async function registerSchedule(scheduleConfig: {
       console.log(`[Scheduler] Next execution: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
       
       // 次回実行時刻をデータベースに保存（非同期）
+      // nextExecはUTCのため、JSTに変換して保存
       if (nextExec) {
-        updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: nextExec }).catch(err => {
+        // UTCの時刻をJSTに変換（9時間足す）
+        const jstNextExec = new Date(nextExec.getTime() + 9 * 60 * 60 * 1000);
+        updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: jstNextExec }).catch(err => {
           console.error('[Scheduler] Failed to update nextExecutionAt:', err);
         });
       }
