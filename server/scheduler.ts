@@ -1,6 +1,6 @@
 import * as schedule from 'node-schedule';
 import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from './scraper';
-import { insertBiddingsBatch, insertScrapingLog } from './db';
+import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting } from './db';
 
 /**
  * スケジューラーサービス
@@ -17,8 +17,8 @@ export async function initializeScheduler() {
   console.log('[Scheduler] Initializing scheduler...');
   
   try {
-    // TODO: データベースからスケジュール設定を読み込む
-    const schedules: any[] = []; // await getActiveSchedules();
+    // データベースからアクティブなスケジュール設定を読み込む
+    const schedules = await getActiveSchedules();
     
     if (!schedules || schedules.length === 0) {
       console.log('[Scheduler] No active schedules found. Creating default schedule (daily at 9:00 AM)...');
@@ -44,31 +44,61 @@ async function createDefaultSchedule() {
   // 現在は直接スケジュールを登録
   const defaultSchedule = {
     id: 0, // 仮のID
-    userId: 0,
     name: 'デフォルト（毎日午前9時）',
+    scheduleType: 'daily',
+    executionTime: '09:00',
+    daysOfWeek: null,
     cronExpression: '0 9 * * *', // 毎日午前9時
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    enabled: true,
   };
   
-  registerSchedule(defaultSchedule);
+  await registerSchedule(defaultSchedule);
   console.log('[Scheduler] Default schedule registered: Daily at 9:00 AM');
+}
+
+/**
+ * scheduleTypeとexecutionTimeからcron式を生成
+ */
+function generateCronExpression(scheduleConfig: {
+  scheduleType: string;
+  executionTime: string;
+  daysOfWeek?: string | null;
+}): string {
+  const [hours, minutes] = scheduleConfig.executionTime.split(':').map(Number);
+  
+  switch (scheduleConfig.scheduleType) {
+    case 'daily':
+      return `${minutes} ${hours} * * *`;
+    case 'weekly':
+      const days = scheduleConfig.daysOfWeek || '1'; // デフォルトは月曜日
+      return `${minutes} ${hours} * * ${days}`;
+    case 'custom':
+      // customの場合はcronExpressionを使用するので、ここには到達しない
+      return `${minutes} ${hours} * * *`;
+    default:
+      return `${minutes} ${hours} * * *`;
+  }
 }
 
 /**
  * スケジュールを登録
  */
-function registerSchedule(scheduleConfig: {
+async function registerSchedule(scheduleConfig: {
   id: number;
   name: string;
-  cronExpression: string;
-  isActive: boolean;
+  scheduleType: string;
+  executionTime: string;
+  daysOfWeek?: string | null;
+  cronExpression?: string | null;
+  enabled: boolean;
 }) {
-  if (!scheduleConfig.isActive) {
+  if (!scheduleConfig.enabled) {
     console.log(`[Scheduler] Schedule "${scheduleConfig.name}" is inactive, skipping`);
     return;
   }
+  
+  // cron式を生成
+  const cronExpr = scheduleConfig.cronExpression || generateCronExpression(scheduleConfig);
   
   // 既存のジョブがあれば削除
   if (activeJobs.has(scheduleConfig.id)) {
@@ -78,15 +108,23 @@ function registerSchedule(scheduleConfig: {
   }
   
   try {
-    const job = schedule.scheduleJob(scheduleConfig.cronExpression, async () => {
+    const job = schedule.scheduleJob(cronExpr, async () => {
       console.log(`[Scheduler] Executing scheduled scraping: ${scheduleConfig.name}`);
       await executeScheduledScraping(scheduleConfig.id, scheduleConfig.name);
     });
     
     if (job) {
       activeJobs.set(scheduleConfig.id, job);
-      console.log(`[Scheduler] Registered schedule: ${scheduleConfig.name} (${scheduleConfig.cronExpression})`);
-      console.log(`[Scheduler] Next execution: ${job.nextInvocation()?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+      console.log(`[Scheduler] Registered schedule: ${scheduleConfig.name} (${cronExpr})`);
+      const nextExec = job.nextInvocation();
+      console.log(`[Scheduler] Next execution: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+      
+      // 次回実行時刻をデータベースに保存（非同期）
+      if (nextExec) {
+        updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: nextExec }).catch(err => {
+          console.error('[Scheduler] Failed to update nextExecutionAt:', err);
+        });
+      }
     } else {
       console.error(`[Scheduler] Failed to create job for schedule: ${scheduleConfig.name}`);
     }
@@ -149,14 +187,17 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
 /**
  * スケジュールを更新（既存のジョブをキャンセルして新しいジョブを登録）
  */
-export function updateSchedule(scheduleConfig: {
+export async function updateSchedule(scheduleConfig: {
   id: number;
   name: string;
-  cronExpression: string;
-  isActive: boolean;
+  scheduleType: string;
+  executionTime: string;
+  daysOfWeek?: string | null;
+  cronExpression?: string | null;
+  enabled: boolean;
 }) {
   console.log(`[Scheduler] Updating schedule: ${scheduleConfig.name}`);
-  registerSchedule(scheduleConfig);
+  await registerSchedule(scheduleConfig);
 }
 
 /**

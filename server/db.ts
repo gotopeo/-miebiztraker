@@ -367,6 +367,16 @@ export async function getScheduleSettings(): Promise<ScheduleSetting[]> {
 }
 
 /**
+ * アクティブなスケジュール設定を取得
+ */
+export async function getActiveSchedules(): Promise<ScheduleSetting[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(scheduleSettings).where(eq(scheduleSettings.enabled, true));
+}
+
+/**
  * スケジュール設定を挿入
  */
 export async function insertScheduleSetting(setting: InsertScheduleSetting): Promise<void> {

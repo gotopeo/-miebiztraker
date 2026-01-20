@@ -225,6 +225,7 @@ export default function ScheduleSettings() {
                       <TableHead>名前</TableHead>
                       <TableHead>タイプ</TableHead>
                       <TableHead>実行時刻</TableHead>
+                      <TableHead>次回実行</TableHead>
                       <TableHead>最終実行</TableHead>
                       <TableHead>有効/無効</TableHead>
                       <TableHead className="text-right">操作</TableHead>
@@ -242,6 +243,13 @@ export default function ScheduleSettings() {
                             : "カスタム"}
                         </TableCell>
                         <TableCell>{schedule.executionTime}</TableCell>
+                        <TableCell>
+                          {schedule.nextExecutionAt
+                            ? new Date(schedule.nextExecutionAt).toLocaleString("ja-JP")
+                            : schedule.enabled
+                            ? "計算中..."
+                            : "-"}
+                        </TableCell>
                         <TableCell>
                           {schedule.lastExecutedAt
                             ? new Date(schedule.lastExecutedAt).toLocaleString("ja-JP")
@@ -279,15 +287,15 @@ export default function ScheduleSettings() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 bg-yellow-50 border-yellow-200">
+        <Card className="mt-6 bg-blue-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-yellow-800">注意事項</CardTitle>
+            <CardTitle className="text-blue-800">自動実行について</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-yellow-700">
-              現在、スケジュール機能は設定のみ可能で、実際の自動実行は未実装です。
+            <p className="text-sm text-blue-700">
+              スケジュールが有効になっている場合、指定された時刻に自動的にスクレイピングが実行されます。
               <br />
-              今後のアップデートで自動実行機能を追加予定です。
+              実行結果は「スクレイピング実行」ページの履歴から確認できます。
             </p>
           </CardContent>
         </Card>

@@ -21,6 +21,7 @@ import {
   deleteScheduleSetting,
 } from "./db";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
+import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
 import ExcelJS from "exceljs";
 
 export const appRouter = router({
@@ -413,6 +414,24 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         await insertScheduleSetting(input);
+        
+        // スケジューラーに登録（enabled=trueの場合）
+        if (input.enabled) {
+          const schedules = await getScheduleSettings();
+          const newSchedule = schedules[0]; // 最新のスケジュール
+          if (newSchedule) {
+            await updateSchedule({
+              id: newSchedule.id,
+              name: newSchedule.name,
+              scheduleType: newSchedule.scheduleType,
+              executionTime: newSchedule.executionTime,
+              daysOfWeek: newSchedule.daysOfWeek,
+              cronExpression: newSchedule.cronExpression,
+              enabled: newSchedule.enabled,
+            });
+          }
+        }
+        
         return { success: true };
       }),
 
@@ -432,6 +451,29 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { id, ...updates } = input;
         await updateScheduleSetting(id, updates);
+        
+        // 更新後のスケジュールを取得
+        const schedules = await getScheduleSettings();
+        const updatedSchedule = schedules.find(s => s.id === id);
+        
+        if (updatedSchedule) {
+          if (updatedSchedule.enabled) {
+            // スケジューラーを更新
+            await updateSchedule({
+              id: updatedSchedule.id,
+              name: updatedSchedule.name,
+              scheduleType: updatedSchedule.scheduleType,
+              executionTime: updatedSchedule.executionTime,
+              daysOfWeek: updatedSchedule.daysOfWeek,
+              cronExpression: updatedSchedule.cronExpression,
+              enabled: updatedSchedule.enabled,
+            });
+          } else {
+            // 無効化された場合はスケジューラーから削除
+            removeSchedule(id);
+          }
+        }
+        
         return { success: true };
       }),
 
@@ -439,9 +481,19 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
+        // スケジューラーから削除
+        removeSchedule(input.id);
+        
+        // データベースから削除
         await deleteScheduleSetting(input.id);
+        
         return { success: true };
       }),
+    
+    // アクティブなスケジュールの次回実行時刻を取得
+    getActiveInfo: protectedProcedure.query(() => {
+      return getActiveScheduleInfo();
+    }),
   }),
 });
 
