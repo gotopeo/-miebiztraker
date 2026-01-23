@@ -14,7 +14,19 @@ import {
   InsertKeywordWatch,
   scheduleSettings,
   ScheduleSetting,
-  InsertScheduleSetting
+  InsertScheduleSetting,
+  lineConnections,
+  LineConnection,
+  InsertLineConnection,
+  lineVerificationCodes,
+  LineVerificationCode,
+  InsertLineVerificationCode,
+  notificationSubscriptions,
+  NotificationSubscription,
+  InsertNotificationSubscription,
+  notificationLogs,
+  NotificationLog,
+  InsertNotificationLog
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -458,4 +470,216 @@ export async function deleteScheduleSetting(id: number): Promise<void> {
   if (!db) return;
 
   await db.delete(scheduleSettings).where(eq(scheduleSettings.id, id));
+}
+
+// ==================== LINE連携関連 ====================
+
+/**
+ * LINE連携情報を取得（ユーザーIDから）
+ */
+export async function getLineConnectionByUserId(userId: number): Promise<LineConnection | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db.select().from(lineConnections).where(eq(lineConnections.userId, userId)).limit(1);
+  return results[0] || null;
+}
+
+/**
+ * LINE連携情報を取得（LINE User IDから）
+ */
+export async function getLineConnectionByLineUserId(lineUserId: string): Promise<LineConnection | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db.select().from(lineConnections).where(eq(lineConnections.lineUserId, lineUserId)).limit(1);
+  return results[0] || null;
+}
+
+/**
+ * LINE連携情報を作成
+ */
+export async function insertLineConnection(connection: InsertLineConnection): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(lineConnections).values(connection);
+}
+
+/**
+ * LINE連携情報を削除
+ */
+export async function deleteLineConnection(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(lineConnections).where(eq(lineConnections.userId, userId));
+}
+
+/**
+ * LINE連携の最終通知日時を更新
+ */
+export async function updateLineConnectionLastNotified(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(lineConnections)
+    .set({ lastNotifiedAt: new Date() })
+    .where(eq(lineConnections.userId, userId));
+}
+
+// ==================== ワンタイムコード関連 ====================
+
+/**
+ * ワンタイムコードを生成して保存
+ */
+export async function createVerificationCode(userId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // 6桁のランダムコードを生成
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // 有効期限は30分後
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+  await db.insert(lineVerificationCodes).values({
+    userId,
+    code,
+    expiresAt,
+    used: false,
+  });
+
+  return code;
+}
+
+/**
+ * ワンタイムコードを検証
+ */
+export async function verifyCode(code: string): Promise<{ valid: boolean; userId?: number }> {
+  const db = await getDb();
+  if (!db) return { valid: false };
+
+  const results = await db.select()
+    .from(lineVerificationCodes)
+    .where(
+      and(
+        eq(lineVerificationCodes.code, code),
+        eq(lineVerificationCodes.used, false),
+        gte(lineVerificationCodes.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (results.length === 0) {
+    return { valid: false };
+  }
+
+  const verificationCode = results[0];
+
+  // コードを使用済みにする
+  await db.update(lineVerificationCodes)
+    .set({ used: true })
+    .where(eq(lineVerificationCodes.id, verificationCode.id));
+
+  return { valid: true, userId: verificationCode.userId };
+}
+
+/**
+ * ユーザーの未使用コードを削除
+ */
+export async function deleteUserVerificationCodes(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(lineVerificationCodes).where(eq(lineVerificationCodes.userId, userId));
+}
+
+// ==================== 通知設定関連 ====================
+
+/**
+ * ユーザーの通知設定一覧を取得
+ */
+export async function getNotificationSubscriptions(userId: number): Promise<NotificationSubscription[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(notificationSubscriptions)
+    .where(eq(notificationSubscriptions.userId, userId))
+    .orderBy(desc(notificationSubscriptions.createdAt));
+}
+
+/**
+ * 有効な通知設定を全て取得
+ */
+export async function getActiveNotificationSubscriptions(): Promise<NotificationSubscription[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(notificationSubscriptions)
+    .where(eq(notificationSubscriptions.enabled, true));
+}
+
+/**
+ * 通知設定を作成
+ */
+export async function insertNotificationSubscription(subscription: InsertNotificationSubscription): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(notificationSubscriptions).values(subscription);
+  return Number(result[0].insertId);
+}
+
+/**
+ * 通知設定を更新
+ */
+export async function updateNotificationSubscription(
+  id: number,
+  updates: Partial<InsertNotificationSubscription>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(notificationSubscriptions)
+    .set(updates)
+    .where(eq(notificationSubscriptions.id, id));
+}
+
+/**
+ * 通知設定を削除
+ */
+export async function deleteNotificationSubscription(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(notificationSubscriptions).where(eq(notificationSubscriptions.id, id));
+}
+
+// ==================== 通知履歴関連 ====================
+
+/**
+ * 通知履歴を記録
+ */
+export async function insertNotificationLog(log: InsertNotificationLog): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(notificationLogs).values(log);
+}
+
+/**
+ * ユーザーの通知履歴を取得
+ */
+export async function getNotificationLogs(userId: number, limit: number = 50): Promise<NotificationLog[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(notificationLogs)
+    .where(eq(notificationLogs.userId, userId))
+    .orderBy(desc(notificationLogs.notifiedAt))
+    .limit(limit);
 }

@@ -226,3 +226,127 @@ export const searchHistory = mysqlTable("searchHistory", {
 
 export type SearchHistory = typeof searchHistory.$inferSelect;
 export type InsertSearchHistory = typeof searchHistory.$inferInsert;
+
+/**
+ * LINE連携テーブル
+ * ユーザーとLINEアカウントの紐付け情報
+ */
+export const lineConnections = mysqlTable("lineConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ユーザーID */
+  userId: int("userId").notNull().unique(),
+  /** LINE User ID */
+  lineUserId: varchar("lineUserId", { length: 100 }).notNull().unique(),
+  /** LINE Display Name */
+  lineDisplayName: varchar("lineDisplayName", { length: 200 }),
+  /** 連携日時 */
+  connectedAt: timestamp("connectedAt").defaultNow().notNull(),
+  /** 最終通知送信日時 */
+  lastNotifiedAt: timestamp("lastNotifiedAt"),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  /** 更新日時 */
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  lineUserIdIdx: index("lineUserId_idx").on(table.lineUserId),
+}));
+
+export type LineConnection = typeof lineConnections.$inferSelect;
+export type InsertLineConnection = typeof lineConnections.$inferInsert;
+
+/**
+ * LINE認証用ワンタイムコードテーブル
+ */
+export const lineVerificationCodes = mysqlTable("lineVerificationCodes", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ユーザーID */
+  userId: int("userId").notNull(),
+  /** 6桁の認証コード */
+  code: varchar("code", { length: 6 }).notNull().unique(),
+  /** 有効期限（発行から30分） */
+  expiresAt: timestamp("expiresAt").notNull(),
+  /** 使用済みフラグ */
+  used: boolean("used").default(false).notNull(),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  codeIdx: index("code_idx").on(table.code),
+  userIdIdx: index("userId_idx").on(table.userId),
+  expiresAtIdx: index("expiresAt_idx").on(table.expiresAt),
+}));
+
+export type LineVerificationCode = typeof lineVerificationCodes.$inferSelect;
+export type InsertLineVerificationCode = typeof lineVerificationCodes.$inferInsert;
+
+/**
+ * 通知設定テーブル
+ * ユーザーごとの通知条件とスケジュール
+ */
+export const notificationSubscriptions = mysqlTable("notificationSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ユーザーID */
+  userId: int("userId").notNull(),
+  /** 設定名 */
+  name: varchar("name", { length: 200 }).notNull(),
+  /** 発注機関コード（カンマ区切り、空の場合は全て） */
+  orderOrganCodes: text("orderOrganCodes"),
+  /** 公告日フィルター（日数、例: 7 = 過去7日間） */
+  publicationDateDays: int("publicationDateDays"),
+  /** 更新日フィルター（日数、例: 3 = 過去3日間） */
+  updateDateDays: int("updateDateDays"),
+  /** キーワード（カンマ区切り） */
+  keywords: text("keywords"),
+  /** 格付フィルター（カンマ区切り） */
+  ratings: varchar("ratings", { length: 100 }),
+  /** 予定価格最小値 */
+  estimatedPriceMin: decimal("estimatedPriceMin", { precision: 15, scale: 2 }),
+  /** 予定価格最大値 */
+  estimatedPriceMax: decimal("estimatedPriceMax", { precision: 15, scale: 2 }),
+  /** 通知時刻（カンマ区切り、例: "08:00,12:00,17:00"） */
+  notificationTimes: varchar("notificationTimes", { length: 200 }).notNull(),
+  /** 有効/無効 */
+  enabled: boolean("enabled").default(true).notNull(),
+  /** 最終通知日時 */
+  lastNotifiedAt: timestamp("lastNotifiedAt"),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  /** 更新日時 */
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  enabledIdx: index("enabled_idx").on(table.enabled),
+}));
+
+export type NotificationSubscription = typeof notificationSubscriptions.$inferSelect;
+export type InsertNotificationSubscription = typeof notificationSubscriptions.$inferInsert;
+
+/**
+ * 通知履歴テーブル
+ */
+export const notificationLogs = mysqlTable("notificationLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** ユーザーID */
+  userId: int("userId").notNull(),
+  /** 通知設定ID */
+  subscriptionId: int("subscriptionId").notNull(),
+  /** 通知した案件数 */
+  biddingCount: int("biddingCount").notNull(),
+  /** 通知した案件ID（カンマ区切り） */
+  biddingIds: text("biddingIds"),
+  /** 通知ステータス（success, failed） */
+  status: mysqlEnum("status", ["success", "failed"]).notNull(),
+  /** エラーメッセージ */
+  errorMessage: text("errorMessage"),
+  /** 通知日時 */
+  notifiedAt: timestamp("notifiedAt").defaultNow().notNull(),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  subscriptionIdIdx: index("subscriptionId_idx").on(table.subscriptionId),
+  notifiedAtIdx: index("notifiedAt_idx").on(table.notifiedAt),
+}));
+
+export type NotificationLog = typeof notificationLogs.$inferSelect;
+export type InsertNotificationLog = typeof notificationLogs.$inferInsert;

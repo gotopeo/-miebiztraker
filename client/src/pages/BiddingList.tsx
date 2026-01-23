@@ -45,6 +45,7 @@ export default function BiddingList() {
     }
   );
 
+  // CSV export mutation - updated 2026-01-20
   const exportCsvMutation = trpc.biddings.exportCsv.useMutation();
   const exportExcelMutation = trpc.biddings.exportExcel.useMutation();
 
@@ -104,6 +105,13 @@ export default function BiddingList() {
         endDate: endDate || undefined,
         newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
       });
+      console.log("[CSV Export] Calling mutation with params:", {
+        keyword: keyword || undefined,
+        orderOrganCode: orderOrganCode || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
+      });
       const result = await exportCsvMutation.mutateAsync({
         keyword: keyword || undefined,
         orderOrganCode: orderOrganCode || undefined,
@@ -111,6 +119,7 @@ export default function BiddingList() {
         endDate: endDate || undefined,
         newItemsFilter: newItemsFilter !== "all" ? newItemsFilter : undefined,
       });
+      console.log("[CSV Export] Received result:", result ? `${result.length} items` : "null");
       if (!result) {
         toast.error("データの取得に失敗しました");
         return;

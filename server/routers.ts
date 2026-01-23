@@ -19,9 +19,22 @@ import {
   insertScheduleSetting,
   updateScheduleSetting,
   deleteScheduleSetting,
+  getLineConnectionByUserId,
+  getLineConnectionByLineUserId,
+  insertLineConnection,
+  deleteLineConnection,
+  createVerificationCode,
+  verifyCode,
+  deleteUserVerificationCodes,
+  getNotificationSubscriptions,
+  insertNotificationSubscription,
+  updateNotificationSubscription,
+  deleteNotificationSubscription,
+  getNotificationLogs,
 } from "./db";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
 import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
+import { sendLineTextMessage, getLineProfile } from "./_core/line";
 import ExcelJS from "exceljs";
 
 export const appRouter = router({
@@ -502,6 +515,128 @@ export const appRouter = router({
     getActiveInfo: protectedProcedure.query(() => {
       return getActiveScheduleInfo();
     }),
+  }),
+
+  // LINE通知関連API
+  line: router({
+    // LINE連携状態を取得
+    getConnection: protectedProcedure.query(async ({ ctx }) => {
+      const connection = await getLineConnectionByUserId(ctx.user.id);
+      return connection;
+    }),
+
+    // ワンタイムコードを発行
+    generateCode: protectedProcedure.mutation(async ({ ctx }) => {
+      // 既存の未使用コードを削除
+      await deleteUserVerificationCodes(ctx.user.id);
+      
+      // 新しいコードを生成
+      const code = await createVerificationCode(ctx.user.id);
+      
+      return { code };
+    }),
+
+    // LINE連携を解除
+    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+      await deleteLineConnection(ctx.user.id);
+      return { success: true };
+    }),
+
+    // ワンタイムコードを検証してLINE連携（Webhookから呼ばれる想定）
+    verifyAndConnect: publicProcedure
+      .input(z.object({
+        code: z.string(),
+        lineUserId: z.string(),
+        lineDisplayName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // コードを検証
+        const verification = await verifyCode(input.code);
+        
+        if (!verification.valid || !verification.userId) {
+          throw new Error("無効なコードです");
+        }
+
+        // 既存の連携を削除（同じLINE User IDの連携があれば）
+        const existingConnection = await getLineConnectionByLineUserId(input.lineUserId);
+        if (existingConnection) {
+          await deleteLineConnection(existingConnection.userId);
+        }
+
+        // 新しい連携を作成
+        await insertLineConnection({
+          userId: verification.userId,
+          lineUserId: input.lineUserId,
+          lineDisplayName: input.lineDisplayName,
+        });
+
+        return { success: true };
+      }),
+  }),
+
+  // 通知設定関連API
+  notifications: router({
+    // 通知設定一覧を取得
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await getNotificationSubscriptions(ctx.user.id);
+    }),
+
+    // 通知設定を作成
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        orderOrganCodes: z.string().optional(),
+        publicationDateDays: z.number().optional(),
+        updateDateDays: z.number().optional(),
+        keywords: z.string().optional(),
+        ratings: z.string().optional(),
+        estimatedPriceMin: z.string().optional(),
+        estimatedPriceMax: z.string().optional(),
+        notificationTimes: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await insertNotificationSubscription({
+          userId: ctx.user.id,
+          ...input,
+        });
+        return { success: true, id };
+      }),
+
+    // 通知設定を更新
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        orderOrganCodes: z.string().optional(),
+        publicationDateDays: z.number().optional(),
+        updateDateDays: z.number().optional(),
+        keywords: z.string().optional(),
+        ratings: z.string().optional(),
+        estimatedPriceMin: z.string().optional(),
+        estimatedPriceMax: z.string().optional(),
+        notificationTimes: z.string().optional(),
+        enabled: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        await updateNotificationSubscription(id, updates);
+        return { success: true };
+      }),
+
+    // 通知設定を削除
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteNotificationSubscription(input.id);
+        return { success: true };
+      }),
+
+    // 通知履歴を取得
+    logs: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        return await getNotificationLogs(ctx.user.id, input.limit);
+      }),
   }),
 });
 

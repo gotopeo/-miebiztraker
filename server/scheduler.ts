@@ -1,6 +1,7 @@
 import * as schedule from 'node-schedule';
 import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from './scraper';
-import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting } from './db';
+import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting, getActiveNotificationSubscriptions } from './db';
+import { runNotificationCheck } from './notificationJob';
 
 /**
  * スケジューラーサービス
@@ -31,8 +32,79 @@ export async function initializeScheduler() {
     }
     
     console.log(`[Scheduler] Initialized with ${schedules.length} active schedule(s)`);
+    
+    // 通知ジョブのスケジュールを登録
+    await initializeNotificationSchedules();
   } catch (error) {
     console.error('[Scheduler] Failed to initialize:', error);
+  }
+}
+
+/**
+ * 通知ジョブのスケジュールを初期化
+ */
+async function initializeNotificationSchedules() {
+  console.log('[Scheduler] Initializing notification schedules...');
+  
+  try {
+    // 有効な通知設定を取得
+    const subscriptions = await getActiveNotificationSubscriptions();
+    
+    if (subscriptions.length === 0) {
+      console.log('[Scheduler] No active notification subscriptions found');
+      return;
+    }
+    
+    // 各通知設定の通知時刻を集約
+    const notificationTimes = new Set<string>();
+    for (const sub of subscriptions) {
+      const times = sub.notificationTimes.split(',').map((t: string) => t.trim());
+      times.forEach(time => notificationTimes.add(time));
+    }
+    
+    // 各通知時刻にスケジュールを登録
+    notificationTimes.forEach(time => {
+      registerNotificationSchedule(time);
+    });
+    
+    console.log(`[Scheduler] Registered ${notificationTimes.size} notification schedule(s)`);
+  } catch (error) {
+    console.error('[Scheduler] Failed to initialize notification schedules:', error);
+  }
+}
+
+/**
+ * 指定時刻に通知ジョブを実行するスケジュールを登録
+ */
+function registerNotificationSchedule(time: string) {
+  const [jstHours, minutes] = time.split(':').map(Number);
+  
+  // JSTからUTCに変換（9時間引く）
+  let utcHours = jstHours - 9;
+  if (utcHours < 0) {
+    utcHours += 24;
+  }
+  
+  const cronExpr = `${minutes} ${utcHours} * * *`; // 毎日実行
+  
+  try {
+    const spec: schedule.RecurrenceSpecDateRange = {
+      rule: cronExpr,
+      tz: 'Etc/UTC'
+    };
+    
+    const job = schedule.scheduleJob(spec, async () => {
+      console.log(`[Scheduler] Executing notification check at ${time} JST`);
+      await runNotificationCheck();
+    });
+    
+    if (job) {
+      console.log(`[Scheduler] Registered notification schedule: ${time} JST (${cronExpr} UTC)`);
+      const nextExec = job.nextInvocation();
+      console.log(`[Scheduler] Next notification check: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+    }
+  } catch (error) {
+    console.error(`[Scheduler] Failed to register notification schedule for ${time}:`, error);
   }
 }
 

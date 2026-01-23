@@ -9,6 +9,8 @@ import BiddingList from "./pages/BiddingList";
 import ScrapingLogs from "./pages/ScrapingLogs";
 import KeywordSettings from "./pages/KeywordSettings";
 import ScheduleSettings from "./pages/ScheduleSettings";
+import LineConnection from "./pages/LineConnection";
+import NotificationSettings from "./pages/NotificationSettings";
 
 function Router() {
   return (
@@ -18,6 +20,8 @@ function Router() {
       <Route path={"/scraping"} component={ScrapingLogs} />
       <Route path={"/keywords"} component={KeywordSettings} />
       <Route path={"/schedules"} component={ScheduleSettings} />
+      <Route path={"/line-connection"} component={LineConnection} />
+      <Route path={"/notifications"} component={NotificationSettings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
