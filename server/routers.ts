@@ -637,6 +637,34 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         return await getNotificationLogs(ctx.user.id, input.limit);
       }),
+
+    // 手動テスト通知を送信
+    sendTest: protectedProcedure
+      .input(z.object({ subscriptionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // 通知設定を取得
+        const subscriptions = await getNotificationSubscriptions(ctx.user.id);
+        const subscription = subscriptions.find(s => s.id === input.subscriptionId);
+        
+        if (!subscription) {
+          throw new Error("通知設定が見つかりません");
+        }
+
+        // LINE連携状態を確認
+        const lineConnection = await getLineConnectionByUserId(ctx.user.id);
+        if (!lineConnection) {
+          throw new Error("LINEアカウントが連携されていません");
+        }
+
+        // テストメッセージを送信
+        const testMessage = `📢 テスト通知\n\n通知設定: ${subscription.name}\n\nLINE通知が正常に動作しています。\n条件に一致する新着案件が公開されると、このように通知が届きます。`;
+        
+        await sendLineTextMessage(lineConnection.lineUserId, testMessage);
+
+        // 通知履歴を記録（テスト通知は履歴に記録しない）
+
+        return { success: true, message: "テスト通知を送信しました" };
+      }),
   }),
 });
 

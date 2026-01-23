@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Pencil, Trash2, Bell, BellOff, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Bell, BellOff, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -53,6 +53,7 @@ export default function NotificationSettings() {
   const createMutation = trpc.notifications.create.useMutation();
   const updateMutation = trpc.notifications.update.useMutation();
   const deleteMutation = trpc.notifications.delete.useMutation();
+  const testMutation = trpc.notifications.sendTest.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +115,16 @@ export default function NotificationSettings() {
     } catch (error) {
       console.error("Failed to delete notification:", error);
       toast.error("通知設定の削除に失敗しました");
+    }
+  };
+
+  const handleSendTest = async (subscriptionId: number) => {
+    try {
+      await testMutation.mutateAsync({ subscriptionId });
+      toast.success("テスト通知を送信しました。LINEを確認してください。");
+    } catch (error: any) {
+      console.error("Failed to send test notification:", error);
+      toast.error(error.message || "テスト通知の送信に失敗しました");
     }
   };
 
@@ -360,6 +371,19 @@ export default function NotificationSettings() {
                       disabled={deleteMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendTest(subscription.id)}
+                      disabled={testMutation.isPending}
+                    >
+                      {testMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      <span className="ml-2">テスト通知</span>
                     </Button>
                   </div>
                 </div>
