@@ -22,16 +22,20 @@ lineWebhookRouter.post("/webhook", async (req, res) => {
       return res.status(400).json({ error: "Missing signature" });
     }
 
+    // 生のリクエストボディを取得（express.raw()でBufferとして保存されている）
+    const rawBody = (req.body as Buffer).toString('utf8');
+    
     // 署名を検証
-    const body = JSON.stringify(req.body);
-    const isValid = verifyLineSignature(body, signature);
+    const isValid = verifyLineSignature(rawBody, signature);
     
     if (!isValid) {
       console.error("[LINE Webhook] Invalid signature");
       return res.status(401).json({ error: "Invalid signature" });
     }
 
-    const events: WebhookEvent[] = req.body.events || [];
+    // JSONをパース
+    const body = JSON.parse(rawBody);
+    const events: WebhookEvent[] = body.events || [];
 
     // 各イベントを処理
     for (const event of events) {
