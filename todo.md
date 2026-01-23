@@ -259,4 +259,4 @@
 - [x] LINE署名検証ロジックを確認
 - [x] Channel Secretが正しく設定されているか確認
 - [x] Webhook署名検証の実装を修正
-- [ ] Webhook検証をテスト（ユーザー実施）
+- [x] Webhook検証をテスト
