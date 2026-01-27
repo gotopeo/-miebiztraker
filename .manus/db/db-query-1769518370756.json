@@ -1,0 +1,76 @@
+{
+  "query": "SELECT DISTINCT orderOrganName FROM biddings WHERE orderOrganName IS NOT NULL ORDER BY orderOrganName LIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT DISTINCT orderOrganName FROM biddings WHERE orderOrganName IS NOT NULL ORDER BY orderOrganName LIMIT 50;",
+  "rows": [
+    {
+      "orderOrganName": "中勢水道事務所"
+    },
+    {
+      "orderOrganName": "中南勢流域下水道事務所"
+    },
+    {
+      "orderOrganName": "伊勢建設事務所"
+    },
+    {
+      "orderOrganName": "伊勢農林水産事務所"
+    },
+    {
+      "orderOrganName": "伊賀建設事務所"
+    },
+    {
+      "orderOrganName": "北勢水道事務所"
+    },
+    {
+      "orderOrganName": "北勢流域下水道事務所"
+    },
+    {
+      "orderOrganName": "四日市建設事務所"
+    },
+    {
+      "orderOrganName": "子ども・福祉部"
+    },
+    {
+      "orderOrganName": "尾鷲建設事務所"
+    },
+    {
+      "orderOrganName": "尾鷲農林水産事務所"
+    },
+    {
+      "orderOrganName": "志摩建設事務所"
+    },
+    {
+      "orderOrganName": "松阪建設事務所"
+    },
+    {
+      "orderOrganName": "松阪農林事務所"
+    },
+    {
+      "orderOrganName": "桑名建設事務所"
+    },
+    {
+      "orderOrganName": "桑名農政事務所"
+    },
+    {
+      "orderOrganName": "津建設事務所"
+    },
+    {
+      "orderOrganName": "津農林水産事務所"
+    },
+    {
+      "orderOrganName": "熊野建設事務所"
+    },
+    {
+      "orderOrganName": "県土整備部"
+    },
+    {
+      "orderOrganName": "警察本部"
+    },
+    {
+      "orderOrganName": "鈴鹿建設事務所"
+    }
+  ],
+  "messages": [],
+  "stdout": "orderOrganName\n中勢水道事務所\n中南勢流域下水道事務所\n伊勢建設事務所\n伊勢農林水産事務所\n伊賀建設事務所\n北勢水道事務所\n北勢流域下水道事務所\n四日市建設事務所\n子ども・福祉部\n尾鷲建設事務所\n尾鷲農林水産事務所\n志摩建設事務所\n松阪建設事務所\n松阪農林事務所\n桑名建設事務所\n桑名農政事務所\n津建設事務所\n津農林水産事務所\n熊野建設事務所\n県土整備部\n警察本部\n鈴鹿建設事務所\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

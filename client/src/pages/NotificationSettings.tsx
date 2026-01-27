@@ -353,10 +353,10 @@ export default function NotificationSettings() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {subscription.orderOrganCodes && (
+                  {subscription.orderOrganNames && (
                     <div>
                       <span className="text-muted-foreground">発注機関:</span>{" "}
-                      {subscription.orderOrganCodes}
+                      {subscription.orderOrganNames}
                     </div>
                   )}
                   {subscription.publicationDateDays && (

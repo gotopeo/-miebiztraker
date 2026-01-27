@@ -589,6 +589,7 @@ export const appRouter = router({
       .input(z.object({
         name: z.string(),
         orderOrganCodes: z.string().optional(),
+        orderOrganNames: z.string().optional(),
         publicationDateDays: z.number().optional(),
         updateDateDays: z.number().optional(),
         keywords: z.string().optional(),
@@ -611,6 +612,7 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().optional(),
         orderOrganCodes: z.string().optional(),
+        orderOrganNames: z.string().optional(),
         publicationDateDays: z.number().optional(),
         updateDateDays: z.number().optional(),
         keywords: z.string().optional(),

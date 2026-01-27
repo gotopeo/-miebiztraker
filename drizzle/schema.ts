@@ -329,8 +329,10 @@ export const notificationSubscriptions = mysqlTable("notificationSubscriptions",
   userId: int("userId").notNull(),
   /** 設定名 */
   name: varchar("name", { length: 200 }).notNull(),
-  /** 発注機関コード（カンマ区切り、空の場合は全て） */
+  /** 発注機関コード（カンマ区切り、空の場合は全て） - 非推奨：orderOrganNamesを使用 */
   orderOrganCodes: text("orderOrganCodes"),
+  /** 発注機関名（カンマ区切り、空の場合は全て） */
+  orderOrganNames: text("orderOrganNames"),
   /** 発注機関ID（JSON配列、例: [1,5,12]） */
   issuerIds: text("issuerIds"),
   /** 工種/委託種別（"工事", "委託", "両方"） */

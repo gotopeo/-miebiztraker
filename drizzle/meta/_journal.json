@@ -57,6 +57,13 @@
       "when": 1769515316624,
       "tag": "0007_daffy_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1769518236764,
+      "tag": "0008_robust_jack_power",
+      "breakpoints": true
     }
   ]
 }

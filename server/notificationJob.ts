@@ -152,10 +152,10 @@ async function processSubscription(subscription: any): Promise<void> {
 async function applyFilters(candidates: Bidding[], subscription: any): Promise<Bidding[]> {
   let filtered = candidates;
 
-  // 発注機関フィルター
-  if (subscription.orderOrganCodes) {
-    const codes = subscription.orderOrganCodes.split(",").map((c: string) => c.trim());
-    filtered = filtered.filter(b => b.orderOrganCode && codes.includes(b.orderOrganCode));
+  // 発注機関フィルター（発注機関名ベース）
+  if (subscription.orderOrganNames) {
+    const names = subscription.orderOrganNames.split(",").map((n: string) => n.trim());
+    filtered = filtered.filter(b => b.orderOrganName && names.includes(b.orderOrganName));
   }
 
   // 工事種別フィルター（OR部分一致）
