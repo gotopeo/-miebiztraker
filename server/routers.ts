@@ -35,6 +35,7 @@ import {
   getIssuersByIds,
 } from "./db";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
+import { detectNewBiddings } from "./newBiddingDetector.js";
 import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
 import { sendLineTextMessage, getLineProfile } from "./_core/line";
 import ExcelJS from "exceljs";
@@ -242,23 +243,23 @@ export const appRouter = router({
           };
         }
 
-        // データベースに保存
+        // データベースに保存（新規判定あり）
         const convertedItems = result.items.map(convertToInsertBidding);
-        const { saved, duplicates } = await insertBiddingsBatch(convertedItems);
+        const { newBiddings, updatedBiddings } = await detectNewBiddings(convertedItems);
 
         // ログ更新
         await updateScrapingLog(logId, {
           finishedAt: new Date(),
           status: "success",
           itemsScraped: result.totalCount,
-          newItems: saved,
+          newItems: newBiddings.length,
         });
 
         return {
           success: true,
           itemsScraped: result.totalCount,
-          newItems: saved,
-          duplicates,
+          newItems: newBiddings.length,
+          updatedItems: updatedBiddings.length,
         };
       } catch (error) {
         // 予期しないエラー

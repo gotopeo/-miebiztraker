@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,28 +25,14 @@ interface NotificationFormData {
   name: string;
   issuerIds: number[];
   projectType: string;
-  publicationDateDays: string;
-  updateDateDays: string;
-  keywords: string;
-  ratings: string;
-  estimatedPriceMin: string;
-  estimatedPriceMax: string;
   notificationTimes: string;
-  enableUpdateNotification: boolean;
 }
 
 const initialFormData: NotificationFormData = {
   name: "",
   issuerIds: [],
   projectType: "",
-  publicationDateDays: "",
-  updateDateDays: "",
-  keywords: "",
-  ratings: "",
-  estimatedPriceMin: "",
-  estimatedPriceMax: "",
   notificationTimes: "08:00",
-  enableUpdateNotification: false,
 };
 
 export default function NotificationSettings() {
@@ -78,12 +65,6 @@ export default function NotificationSettings() {
         name: formData.name,
         issuerIds: formData.issuerIds.length > 0 ? formData.issuerIds.join(",") : undefined,
         projectType: formData.projectType || undefined,
-        publicationDateDays: formData.publicationDateDays ? parseInt(formData.publicationDateDays) : undefined,
-        updateDateDays: formData.updateDateDays ? parseInt(formData.updateDateDays) : undefined,
-        keywords: formData.keywords || undefined,
-        ratings: formData.ratings || undefined,
-        estimatedPriceMin: formData.estimatedPriceMin || undefined,
-        estimatedPriceMax: formData.estimatedPriceMax || undefined,
         notificationTimes: formData.notificationTimes,
       };
 
@@ -111,14 +92,7 @@ export default function NotificationSettings() {
       name: subscription.name,
       issuerIds: subscription.issuerIds ? subscription.issuerIds.split(",").map(Number) : [],
       projectType: subscription.projectType || "",
-      publicationDateDays: subscription.publicationDateDays?.toString() || "",
-      updateDateDays: subscription.updateDateDays?.toString() || "",
-      keywords: subscription.keywords || "",
-      ratings: subscription.ratings || "",
-      estimatedPriceMin: subscription.estimatedPriceMin || "",
-      estimatedPriceMax: subscription.estimatedPriceMax || "",
       notificationTimes: subscription.notificationTimes || "08:00",
-      enableUpdateNotification: subscription.enableUpdateNotification || false,
     });
     setIsDialogOpen(true);
   };
@@ -243,108 +217,45 @@ export default function NotificationSettings() {
                   </p>
                 </div>
 
-                {/* 公告日フィルター */}
-                <div className="space-y-2">
-                  <Label htmlFor="publicationDateDays">公告日フィルター（日数）</Label>
-                  <Input
-                    id="publicationDateDays"
-                    type="number"
-                    value={formData.publicationDateDays}
-                    onChange={(e) => setFormData({ ...formData, publicationDateDays: e.target.value })}
-                    placeholder="例: 7（過去7日間）"
-                  />
-                </div>
-
-                {/* 更新日フィルター */}
-                <div className="space-y-2">
-                  <Label htmlFor="updateDateDays">更新日フィルター（日数）</Label>
-                  <Input
-                    id="updateDateDays"
-                    type="number"
-                    value={formData.updateDateDays}
-                    onChange={(e) => setFormData({ ...formData, updateDateDays: e.target.value })}
-                    placeholder="例: 3（過去3日間）"
-                  />
-                </div>
-
-                {/* キーワード */}
-                <div className="space-y-2">
-                  <Label htmlFor="keywords">キーワード</Label>
-                  <Input
-                    id="keywords"
-                    value={formData.keywords}
-                    onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                    placeholder="複数の場合はカンマ区切り（例: 道路,橋梁）"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    複数指定時はOR条件（いずれか1つでも含まれれば一致）
-                  </p>
-                </div>
-
-                {/* 格付 */}
-                <div className="space-y-2">
-                  <Label htmlFor="ratings">格付</Label>
-                  <Input
-                    id="ratings"
-                    value={formData.ratings}
-                    onChange={(e) => setFormData({ ...formData, ratings: e.target.value })}
-                    placeholder="複数の場合はカンマ区切り（例: A,B）"
-                  />
-                </div>
-
-                {/* 予定価格 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="estimatedPriceMin">予定価格（最小）</Label>
-                    <Input
-                      id="estimatedPriceMin"
-                      type="number"
-                      value={formData.estimatedPriceMin}
-                      onChange={(e) => setFormData({ ...formData, estimatedPriceMin: e.target.value })}
-                      placeholder="円"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estimatedPriceMax">予定価格（最大）</Label>
-                    <Input
-                      id="estimatedPriceMax"
-                      type="number"
-                      value={formData.estimatedPriceMax}
-                      onChange={(e) => setFormData({ ...formData, estimatedPriceMax: e.target.value })}
-                      placeholder="円"
-                    />
-                  </div>
-                </div>
-
-                {/* 更新通知 */}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="enableUpdateNotification"
-                    checked={formData.enableUpdateNotification}
-                    onChange={(e) => setFormData({ ...formData, enableUpdateNotification: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="enableUpdateNotification" className="font-normal cursor-pointer">
-                    更新通知を受け取る
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground ml-6">
-                  既に通知した案件の重要な変更（締切日延長、予定価格変更など）も通知します
-                </p>
-
                 {/* 通知時刻 */}
                 <div className="space-y-2">
                   <Label htmlFor="notificationTimes">通知時刻 *</Label>
-                  <Input
-                    id="notificationTimes"
+                  <Select
                     value={formData.notificationTimes}
-                    onChange={(e) => setFormData({ ...formData, notificationTimes: e.target.value })}
-                    placeholder="複数の場合はカンマ区切り（例: 08:00,12:00,17:00）"
-                    required
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, notificationTimes: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="時刻を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="00:00">00:00</SelectItem>
+                      <SelectItem value="01:00">01:00</SelectItem>
+                      <SelectItem value="02:00">02:00</SelectItem>
+                      <SelectItem value="03:00">03:00</SelectItem>
+                      <SelectItem value="04:00">04:00</SelectItem>
+                      <SelectItem value="05:00">05:00</SelectItem>
+                      <SelectItem value="06:00">06:00</SelectItem>
+                      <SelectItem value="07:00">07:00</SelectItem>
+                      <SelectItem value="08:00">08:00</SelectItem>
+                      <SelectItem value="09:00">09:00</SelectItem>
+                      <SelectItem value="10:00">10:00</SelectItem>
+                      <SelectItem value="11:00">11:00</SelectItem>
+                      <SelectItem value="12:00">12:00</SelectItem>
+                      <SelectItem value="13:00">13:00</SelectItem>
+                      <SelectItem value="14:00">14:00</SelectItem>
+                      <SelectItem value="15:00">15:00</SelectItem>
+                      <SelectItem value="16:00">16:00</SelectItem>
+                      <SelectItem value="17:00">17:00</SelectItem>
+                      <SelectItem value="18:00">18:00</SelectItem>
+                      <SelectItem value="19:00">19:00</SelectItem>
+                      <SelectItem value="20:00">20:00</SelectItem>
+                      <SelectItem value="21:00">21:00</SelectItem>
+                      <SelectItem value="22:00">22:00</SelectItem>
+                      <SelectItem value="23:00">23:00</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    HH:MM形式で入力してください
+                    指定した時刻に新規案件を通知します
                   </p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
-import { Builder, By, until, WebDriver, WebElement } from "selenium-webdriver";
+import { Builder, By, until, WebDriver } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
+import { generateTenderCanonicalId } from "./tenderIdentity.js";
 
 /**
  * 検索条件インターフェース
@@ -490,7 +491,8 @@ export async function scrapeMieBiddings(
  * ScrapedBiddingItemをInsertBiddingに変換
  */
 export function convertToInsertBidding(item: ScrapedBiddingItem): any {
-  return {
+  
+  const bidding: any = {
     caseNumber: item.caseNumber,
     title: item.title,
     orderOrganName: item.orderOrganName,
@@ -510,4 +512,9 @@ export function convertToInsertBidding(item: ScrapedBiddingItem): any {
     remarks: item.remarks,
     rawData: JSON.stringify(item),
   };
+  
+  // tenderCanonicalIdを生成
+  bidding.tenderCanonicalId = generateTenderCanonicalId(bidding);
+  
+  return bidding;
 }
