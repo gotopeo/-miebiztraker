@@ -1,14 +1,19 @@
 /**
  * 新規案件検出ロジック
- * MVP仕様書 3.4節に基づく実装
+ * 新ロジック仕様に基づく実装（Upsert方式）
  */
 import { getDb } from "./db.js";
 import { biddings, Bidding, InsertBidding } from "../drizzle/schema.js";
 import { eq } from "drizzle-orm";
-import { generateTenderCanonicalId, detectChanges, detectImportantChanges } from "./tenderIdentity.js";
+import { generateTenderCanonicalId, detectTitleChange } from "./tenderIdentity.js";
 
 /**
- * 新規案件を検出して保存
+ * 新規案件を検出して保存（Upsert方式）
+ * 
+ * 新ロジック仕様：
+ * - 新規案件の場合：firstSeenAt, lastSeenAt, version=0, updatedAt=NULL
+ * - 既存案件の場合：lastSeenAtを更新
+ * - タイトル変更検出時：title, version++, updatedAt=now
  * 
  * @param scrapedBiddings スクレイピングで取得した案件リスト
  * @returns 新規案件と更新案件のリスト
@@ -17,8 +22,7 @@ export interface UpdatedBiddingWithChanges {
   old: Bidding;
   new: Bidding;
   changedFields: string[];
-  hasImportantChanges: boolean;
-  importantChanges?: ReturnType<typeof detectImportantChanges>;
+  version: number;
 }
 
 export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[]): Promise<{
@@ -52,6 +56,8 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
         tenderCanonicalId,
         firstSeenAt: now,
         lastSeenAt: now,
+        version: 0,
+        updatedAt: null,
         caseNumber: scrapedBidding.caseNumber || "",
         title: scrapedBidding.title || "",
       };
@@ -67,20 +73,26 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
 
       if (newBidding) {
         newBiddings.push(newBidding);
+        console.log(`[NewBiddingDetector] New bidding detected: ${tenderCanonicalId} - ${newBidding.title}`);
       }
     } else {
-      // 既存案件 - 更新チェック
+      // 既存案件 - タイトル変更チェック
       const existingBidding = existingBiddings[0];
       
-      // 差分判定
-      const { hasChanges, changedFields } = detectChanges(existingBidding, scrapedBidding);
+      // タイトル変更判定
+      const titleChanged = scrapedBidding.title 
+        ? detectTitleChange(existingBidding.title, scrapedBidding.title)
+        : false;
 
-      if (hasChanges) {
-        // 更新あり
+      if (titleChanged) {
+        // タイトル変更あり → 更新案件として処理
+        const newVersion = existingBidding.version + 1;
+        
         const updateData: Partial<InsertBidding> = {
           ...scrapedBidding,
           lastSeenAt: now,
-          lastUpdatedAtSource: scrapedBidding.lastUpdatedAtSource || now,
+          version: newVersion,
+          updatedAt: now,
         };
 
         await db
@@ -96,19 +108,18 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
           .limit(1);
 
         if (updatedBidding) {
-          // 重要な変更を検出
-          const importantChangesResult = detectImportantChanges(existingBidding, scrapedBidding);
-          
           updatedBiddings.push({
             old: existingBidding,
             new: updatedBidding,
-            changedFields,
-            hasImportantChanges: importantChangesResult.hasImportantChanges,
-            importantChanges: importantChangesResult.hasImportantChanges ? importantChangesResult : undefined,
+            changedFields: ["案件名"],
+            version: newVersion,
           });
+          console.log(`[NewBiddingDetector] Bidding updated: ${tenderCanonicalId} - version ${newVersion}`);
+          console.log(`  Old title: ${existingBidding.title}`);
+          console.log(`  New title: ${updatedBidding.title}`);
         }
       } else {
-        // 更新なし - last_seen_atのみ更新
+        // タイトル変更なし - lastSeenAtのみ更新
         await db
           .update(biddings)
           .set({ lastSeenAt: now })
@@ -116,6 +127,8 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
       }
     }
   }
+
+  console.log(`[NewBiddingDetector] Summary: ${newBiddings.length} new, ${updatedBiddings.length} updated`);
 
   return {
     newBiddings,
@@ -126,6 +139,10 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
 /**
  * 通知対象の新規案件をフィルタリング
  * 初回通知の場合は最新10件のみに制限
+ * 
+ * 新ロジック仕様：
+ * - max(firstSeenAt, updatedAt) desc でソート
+ * - 上位10件のみを通知対象とする
  */
 export function filterNewBiddingsForNotification(
   newBiddings: Bidding[],
@@ -136,10 +153,10 @@ export function filterNewBiddingsForNotification(
   }
 
   // 初回通知の場合は最新10件のみ
-  // ソート基準: publicationDate > updateDate > firstSeenAt
+  // ソート基準: max(firstSeenAt, updatedAt)
   const sorted = [...newBiddings].sort((a, b) => {
-    const aDate = a.publicationDate || a.updateDate || a.firstSeenAt;
-    const bDate = b.publicationDate || b.updateDate || b.firstSeenAt;
+    const aDate = a.updatedAt || a.firstSeenAt;
+    const bDate = b.updatedAt || b.firstSeenAt;
     
     if (!aDate || !bDate) return 0;
     return bDate.getTime() - aDate.getTime();

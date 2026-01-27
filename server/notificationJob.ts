@@ -1,12 +1,13 @@
 import { 
   getActiveNotificationSubscriptions, 
   getLineConnectionByUserId,
-  searchBiddings,
-  insertNotificationLog,
   updateNotificationSubscription,
-  getAlreadySentNotifications
+  getDb
 } from "./db";
 import { sendLineTextMessage } from "./_core/line";
+import { biddings, notificationLogs, Bidding } from "../drizzle/schema";
+import { and, eq, gt, lte, inArray, sql } from "drizzle-orm";
+import { matchesKeywords } from "./tenderIdentity";
 
 /**
  * 通知チェックジョブを実行
@@ -42,10 +43,15 @@ export async function runNotificationCheck(): Promise<void> {
 }
 
 /**
- * 個別の通知設定を処理
+ * 個別の通知設定を処理（新ロジック仕様：時間窓方式）
  */
 async function processSubscription(subscription: any): Promise<void> {
   console.log(`[Notification Job] Processing subscription ${subscription.id}: ${subscription.name}`);
+
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database connection failed");
+  }
 
   // LINE連携を確認
   const lineConnection = await getLineConnectionByUserId(subscription.userId);
@@ -55,244 +61,206 @@ async function processSubscription(subscription: any): Promise<void> {
     return;
   }
 
-  // フィルター条件を構築
-  const filters: any = {};
-
-  // 発注機関コード
-  if (subscription.orderOrganCodes) {
-    filters.orderOrganCodes = subscription.orderOrganCodes.split(",").map((c: string) => c.trim());
-  }
-
-  // 公告日フィルター（過去N日間）
-  if (subscription.publicationDateDays) {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - subscription.publicationDateDays);
-    filters.publicationDateFrom = daysAgo;
-  }
-
-  // 更新日フィルター（過去N日間）
-  if (subscription.updateDateDays) {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - subscription.updateDateDays);
-    filters.updateDateFrom = daysAgo;
-  }
-
-  // キーワード
-  if (subscription.keywords) {
-    filters.keywords = subscription.keywords.split(",").map((k: string) => k.trim());
-  }
-
-  // 格付
-  if (subscription.ratings) {
-    filters.ratings = subscription.ratings.split(",").map((r: string) => r.trim());
-  }
-
-  // 予定価格
-  if (subscription.estimatedPriceMin) {
-    filters.estimatedPriceMin = parseFloat(subscription.estimatedPriceMin);
-  }
-  if (subscription.estimatedPriceMax) {
-    filters.estimatedPriceMax = parseFloat(subscription.estimatedPriceMax);
-  }
-
-  // 新着案件のみ（最終通知日時以降）
+  // 時間窓の設定
+  const since = subscription.lastNotifiedAt || new Date(Date.now() - 24 * 60 * 60 * 1000); // 初回は過去24時間
+  const until = new Date();
   const isFirstNotification = !subscription.isFirstNotificationSent;
-  const enableUpdateNotification = subscription.enableUpdateNotification || false;
-  
-  if (subscription.lastNotifiedAt) {
-    filters.createdAtFrom = new Date(subscription.lastNotifiedAt);
-  } else {
-    // 初回実行の場合は過去24時間
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    filters.createdAtFrom = yesterday;
+
+  console.log(`[Notification Job] Time window: ${since.toISOString()} to ${until.toISOString()}`);
+  console.log(`[Notification Job] Is first notification: ${isFirstNotification}`);
+
+  // 新規候補を取得：firstSeenAt > since AND firstSeenAt <= until
+  const newCandidates = await db
+    .select()
+    .from(biddings)
+    .where(
+      and(
+        gt(biddings.firstSeenAt, since),
+        lte(biddings.firstSeenAt, until)
+      )
+    );
+
+  console.log(`[Notification Job] Found ${newCandidates.length} new candidates`);
+
+  // 更新候補を取得：updatedAt > since AND updatedAt <= until
+  const updateCandidates = await db
+    .select()
+    .from(biddings)
+    .where(
+      and(
+        sql`${biddings.updatedAt} IS NOT NULL`,
+        gt(biddings.updatedAt, since),
+        lte(biddings.updatedAt, until)
+      )
+    );
+
+  console.log(`[Notification Job] Found ${updateCandidates.length} update candidates`);
+
+  // new優先ルール：同一tenderCanonicalIdがnewとupdateの両方に該当する場合、newのみ通知
+  const newCanonicalIds = new Set(newCandidates.map(b => b.tenderCanonicalId));
+  const filteredUpdateCandidates = updateCandidates.filter(b => !newCanonicalIds.has(b.tenderCanonicalId));
+
+  console.log(`[Notification Job] After new-priority rule: ${filteredUpdateCandidates.length} update candidates`);
+
+  // フィルタリング
+  const filteredNew = await applyFilters(newCandidates, subscription);
+  const filteredUpdate = await applyFilters(filteredUpdateCandidates, subscription);
+
+  console.log(`[Notification Job] After filtering: ${filteredNew.length} new, ${filteredUpdate.length} updates`);
+
+  // 初回通知抑制
+  let finalNew = filteredNew;
+  if (isFirstNotification && filteredNew.length > 0) {
+    // max(firstSeenAt, updatedAt) desc でソート
+    const sorted = [...filteredNew].sort((a, b) => {
+      const aDate = a.updatedAt || a.firstSeenAt;
+      const bDate = b.updatedAt || b.firstSeenAt;
+      if (!aDate || !bDate) return 0;
+      return bDate.getTime() - aDate.getTime();
+    });
+    finalNew = sorted.slice(0, 10);
+    console.log(`[Notification Job] First notification: limited to ${finalNew.length} items`);
   }
 
-  // 案件を検索
-  let biddings = await searchBiddings({
-    ...filters,
-    limit: isFirstNotification ? 10 : 50, // 初回は10件、通常は50件
-    offset: 0,
+  // 重複チェック
+  const finalNewAfterDuplicateCheck = await removeDuplicates(finalNew, subscription.userId, subscription.id, "NEW", db);
+  const finalUpdateAfterDuplicateCheck = await removeDuplicates(filteredUpdate, subscription.userId, subscription.id, "UPDATE", db);
+
+  console.log(`[Notification Job] After duplicate check: ${finalNewAfterDuplicateCheck.length} new, ${finalUpdateAfterDuplicateCheck.length} updates`);
+
+  // 通知送信
+  if (finalNewAfterDuplicateCheck.length > 0) {
+    await sendNotification(finalNewAfterDuplicateCheck, subscription, lineConnection, "NEW", db);
+  }
+
+  if (finalUpdateAfterDuplicateCheck.length > 0) {
+    await sendNotification(finalUpdateAfterDuplicateCheck, subscription, lineConnection, "UPDATE", db);
+  }
+
+  // last_notified_atを更新
+  await updateNotificationSubscription(subscription.id, {
+    lastNotifiedAt: until,
+    isFirstNotificationSent: true,
   });
 
-  // 初回通知の場合、最新10件に制限（公告日降順）
-  if (isFirstNotification && biddings.length > 0) {
-    biddings = biddings
-      .sort((a, b) => {
-        const aDate = a.publicationDate || a.updateDate || a.createdAt;
-        const bDate = b.publicationDate || b.updateDate || b.createdAt;
-        if (!aDate || !bDate) return 0;
-        return new Date(bDate).getTime() - new Date(aDate).getTime();
-      })
-      .slice(0, 10);
+  console.log(`[Notification Job] Subscription ${subscription.id} processed successfully`);
+}
+
+/**
+ * フィルタリング処理
+ */
+async function applyFilters(candidates: Bidding[], subscription: any): Promise<Bidding[]> {
+  let filtered = candidates;
+
+  // 発注機関フィルター
+  if (subscription.orderOrganCodes) {
+    const codes = subscription.orderOrganCodes.split(",").map((c: string) => c.trim());
+    filtered = filtered.filter(b => b.orderOrganCode && codes.includes(b.orderOrganCode));
   }
 
-  console.log(`[Notification Job] Found ${biddings.length} matching biddings for subscription ${subscription.id}`);
-
-  if (biddings.length === 0) {
-    // 新着案件がない場合もlastNotifiedAtを更新
-    await updateNotificationSubscription(subscription.id, {
-      lastNotifiedAt: new Date(),
-    });
-    return;
+  // 工事種別フィルター（OR部分一致）
+  if (subscription.keywords) {
+    const keywords = subscription.keywords.split(",").map((k: string) => k.trim());
+    filtered = filtered.filter(b => matchesKeywords(b.constructionType || "", keywords));
   }
 
-  // 重複チェック: 既に通知済みの案件を除外
-  const tenderCanonicalIds = biddings
-    .map(b => b.tenderCanonicalId)
-    .filter((id): id is string => !!id);
-  
-  const alreadySent = await getAlreadySentNotifications(
-    subscription.userId,
-    subscription.id,
-    tenderCanonicalIds
-  );
+  return filtered;
+}
 
-  // 未通知の案件のみにフィルタリング
-  const newBiddings = biddings.filter(b => 
-    b.tenderCanonicalId && !alreadySent.includes(b.tenderCanonicalId)
-  );
+/**
+ * 重複チェック
+ */
+async function removeDuplicates(
+  candidates: Bidding[],
+  userId: number,
+  subscriptionId: number,
+  notificationType: "NEW" | "UPDATE",
+  db: any
+): Promise<Bidding[]> {
+  if (candidates.length === 0) return [];
 
-  console.log(`[Notification Job] ${newBiddings.length} new biddings after duplicate check (filtered ${alreadySent.length} duplicates)`);
+  const tenderCanonicalIds = candidates.map(b => b.tenderCanonicalId);
 
-  if (newBiddings.length === 0) {
-    // 重複除外後に新着案件がない場合
-    await updateNotificationSubscription(subscription.id, {
-      lastNotifiedAt: new Date(),
-    });
-    return;
-  }
+  if (notificationType === "NEW") {
+    // NEW通知の重複チェック
+    const alreadySent = await db
+      .select()
+      .from(notificationLogs)
+      .where(
+        and(
+          eq(notificationLogs.userId, userId),
+          eq(notificationLogs.subscriptionId, subscriptionId),
+          inArray(notificationLogs.tenderCanonicalId, tenderCanonicalIds),
+          eq(notificationLogs.notificationType, "NEW")
+        )
+      );
 
-  // LINE通知を送信
-  try {
-    const message = formatNotificationMessage(subscription.name, newBiddings);
-    await sendLineTextMessage(lineConnection.lineUserId, message);
+    const sentIds = new Set(alreadySent.map((log: any) => log.tenderCanonicalId));
+    return candidates.filter(b => !sentIds.has(b.tenderCanonicalId));
+  } else {
+    // UPDATE通知の重複チェック（バージョン含む）
+    const alreadySent = await db
+      .select()
+      .from(notificationLogs)
+      .where(
+        and(
+          eq(notificationLogs.userId, userId),
+          eq(notificationLogs.subscriptionId, subscriptionId),
+          inArray(notificationLogs.tenderCanonicalId, tenderCanonicalIds),
+          eq(notificationLogs.notificationType, "UPDATE")
+        )
+      );
 
-    // 通知履歴を記録（個別に記録して重複防止）
-    for (const bidding of newBiddings) {
-      if (bidding.tenderCanonicalId) {
-        await insertNotificationLog({
-          userId: subscription.userId,
-          subscriptionId: subscription.id,
-          tenderCanonicalId: bidding.tenderCanonicalId,
-          notificationType: "NEW",
-          biddingCount: 1,
-          biddingIds: bidding.id.toString(),
-          status: "success",
-        });
-      }
-    }
-
-    // 最終通知日時と初回通知フラグを更新
-    await updateNotificationSubscription(subscription.id, {
-      lastNotifiedAt: new Date(),
-      isFirstNotificationSent: true,
-    });
-
-    console.log(`[Notification Job] Successfully sent notification to user ${subscription.userId}`);
-  } catch (error) {
-    console.error(`[Notification Job] Failed to send notification:`, error);
-
-    // エラーを記録（バッチで記録）
-    await insertNotificationLog({
-      userId: subscription.userId,
-      subscriptionId: subscription.id,
-      tenderCanonicalId: newBiddings.map((b) => b.tenderCanonicalId || b.id.toString()).join(","),
-      notificationType: "NEW",
-      biddingCount: newBiddings.length,
-      biddingIds: newBiddings.map((b) => b.id).join(","),
-      status: "failed",
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-
-  // 更新通知が有効な場合、更新案件をチェック
-  if (enableUpdateNotification) {
-    await processUpdateNotifications(subscription, lineConnection, filters);
+    // (tenderCanonicalId, version)の組み合わせで重複チェック
+    const sentKeys = new Set(
+      alreadySent.map((log: any) => `${log.tenderCanonicalId}-${log.tenderVersion}`)
+    );
+    return candidates.filter(b => !sentKeys.has(`${b.tenderCanonicalId}-${b.version}`));
   }
 }
 
 /**
- * 更新通知を処理
+ * 通知送信
  */
-async function processUpdateNotifications(
+async function sendNotification(
+  biddings: Bidding[],
   subscription: any,
   lineConnection: any,
-  filters: any
+  notificationType: "NEW" | "UPDATE",
+  db: any
 ): Promise<void> {
-  console.log(`[Notification Job] Checking for updated biddings for subscription ${subscription.id}`);
-
-  // 更新案件を検索（最終通知日時以降に更新された案件）
-  const updatedFilters = {
-    ...filters,
-    lastUpdatedAtFrom: subscription.lastNotifiedAt || new Date(Date.now() - 24 * 60 * 60 * 1000),
-    limit: 50,
-    offset: 0,
-  };
-
-  const updatedBiddings = await searchBiddings(updatedFilters);
-
-  console.log(`[Notification Job] Found ${updatedBiddings.length} potentially updated biddings`);
-
-  if (updatedBiddings.length === 0) {
-    return;
-  }
-
-  // 重複チェック: 既に更新通知済みの案件を除外
-  const tenderCanonicalIds = updatedBiddings
-    .map(b => b.tenderCanonicalId)
-    .filter((id): id is string => !!id);
-  
-  const alreadySentUpdates = await getAlreadySentNotifications(
-    subscription.userId,
-    subscription.id,
-    tenderCanonicalIds,
-    "UPDATE"
-  );
-
-  // 未通知の更新案件のみにフィルタリング
-  const newUpdates = updatedBiddings.filter(b => 
-    b.tenderCanonicalId && !alreadySentUpdates.includes(b.tenderCanonicalId)
-  );
-
-  console.log(`[Notification Job] ${newUpdates.length} new updates after duplicate check`);
-
-  if (newUpdates.length === 0) {
-    return;
-  }
-
-  // 更新通知を送信
   try {
-    const message = formatUpdateNotificationMessage(subscription.name, newUpdates);
+    const message = formatNotificationMessage(subscription.name, biddings, notificationType);
     await sendLineTextMessage(lineConnection.lineUserId, message);
 
     // 通知履歴を記録
-    for (const bidding of newUpdates) {
-      if (bidding.tenderCanonicalId) {
-        await insertNotificationLog({
-          userId: subscription.userId,
-          subscriptionId: subscription.id,
-          tenderCanonicalId: bidding.tenderCanonicalId,
-          notificationType: "UPDATE",
-          biddingCount: 1,
-          biddingIds: bidding.id.toString(),
-          status: "success",
-        });
-      }
+    for (const bidding of biddings) {
+      await db.insert(notificationLogs).values({
+        userId: subscription.userId,
+        subscriptionId: subscription.id,
+        tenderCanonicalId: bidding.tenderCanonicalId,
+        notificationType: notificationType,
+        tenderVersion: notificationType === "UPDATE" ? bidding.version : null,
+        biddingCount: 1,
+        biddingIds: bidding.id.toString(),
+        status: "success",
+        messageContent: message.substring(0, 500), // 最初の500文字のみ保存
+      });
     }
 
-    console.log(`[Notification Job] Successfully sent update notification to user ${subscription.userId}`);
+    console.log(`[Notification Job] Successfully sent ${notificationType} notification: ${biddings.length} items`);
   } catch (error) {
-    console.error(`[Notification Job] Failed to send update notification:`, error);
+    console.error(`[Notification Job] Failed to send ${notificationType} notification:`, error);
 
     // エラーを記録
-    await insertNotificationLog({
+    await db.insert(notificationLogs).values({
       userId: subscription.userId,
       subscriptionId: subscription.id,
-      tenderCanonicalId: newUpdates.map((b) => b.tenderCanonicalId || b.id.toString()).join(","),
-      notificationType: "UPDATE",
-      biddingCount: newUpdates.length,
-      biddingIds: newUpdates.map((b) => b.id).join(","),
+      tenderCanonicalId: biddings.map(b => b.tenderCanonicalId).join(","),
+      notificationType: notificationType,
+      tenderVersion: null,
+      biddingCount: biddings.length,
+      biddingIds: biddings.map(b => b.id).join(","),
       status: "failed",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
@@ -302,9 +270,10 @@ async function processUpdateNotifications(
 /**
  * 通知メッセージをフォーマット
  */
-function formatNotificationMessage(subscriptionName: string, biddings: any[]): string {
+function formatNotificationMessage(subscriptionName: string, biddings: Bidding[], notificationType: "NEW" | "UPDATE"): string {
+  const typeLabel = notificationType === "NEW" ? "新着" : "更新";
   let message = `📢 【${subscriptionName}】\n\n`;
-  message += `新着入札情報が ${biddings.length} 件あります。\n\n`;
+  message += `${typeLabel}入札情報が ${biddings.length} 件あります。\n\n`;
 
   // 最大5件まで表示
   const displayBiddings = biddings.slice(0, 5);
@@ -317,12 +286,20 @@ function formatNotificationMessage(subscriptionName: string, biddings: any[]): s
       message += `🏢 ${bidding.orderOrganName}\n`;
     }
     
-    if (bidding.biddingDate) {
-      message += `📅 入札日: ${new Date(bidding.biddingDate).toLocaleDateString("ja-JP")}\n`;
+    if (bidding.caseNumber) {
+      message += `🔖 案件番号: ${bidding.caseNumber}\n`;
+    }
+    
+    if (notificationType === "UPDATE" && bidding.version) {
+      message += `🔄 バージョン: ${bidding.version}\n`;
+    }
+    
+    if (bidding.applicationDeadline) {
+      message += `📅 締切日: ${new Date(bidding.applicationDeadline).toLocaleDateString("ja-JP")}\n`;
     }
     
     if (bidding.estimatedPrice) {
-      const price = parseFloat(bidding.estimatedPrice);
+      const price = parseFloat(bidding.estimatedPrice.toString());
       message += `💰 予定価格: ${price.toLocaleString()}円\n`;
     }
     
@@ -331,45 +308,6 @@ function formatNotificationMessage(subscriptionName: string, biddings: any[]): s
 
   if (biddings.length > 5) {
     message += `\n他 ${biddings.length - 5} 件の案件があります。\n`;
-  }
-
-  message += `\n詳細はWebサイトでご確認ください。`;
-
-  return message;
-}
-
-/**
- * 更新通知メッセージをフォーマット
- */
-function formatUpdateNotificationMessage(subscriptionName: string, biddings: any[]): string {
-  let message = `📢 【${subscriptionName}】案件更新通知\n\n`;
-  message += `入札案件が ${biddings.length} 件更新されました。\n\n`;
-
-  // 最大5件まで表示
-  const displayBiddings = biddings.slice(0, 5);
-
-  for (const bidding of displayBiddings) {
-    message += `━━━━━━━━━━━━━━\n`;
-    message += `📄 ${bidding.title}\n`;
-    
-    if (bidding.orderOrganName) {
-      message += `🏢 ${bidding.orderOrganName}\n`;
-    }
-    
-    if (bidding.applicationDeadline) {
-      message += `📅 締切日: ${new Date(bidding.applicationDeadline).toLocaleDateString("ja-JP")}\n`;
-    }
-    
-    if (bidding.estimatedPrice) {
-      const price = parseFloat(bidding.estimatedPrice);
-      message += `💰 予定価格: ${price.toLocaleString()}円\n`;
-    }
-    
-    message += `\n`;
-  }
-
-  if (biddings.length > 5) {
-    message += `\n他 ${biddings.length - 5} 件の更新があります。\n`;
   }
 
   message += `\n詳細はWebサイトでご確認ください。`;

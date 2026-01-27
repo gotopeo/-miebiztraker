@@ -1,8 +1,7 @@
 /**
  * 案件同一性判定ロジック
- * MVP仕様書 3.4節に基づく実装
+ * 新ロジック仕様に基づく実装
  */
-import crypto from "crypto";
 import { Bidding } from "../drizzle/schema";
 
 /**
@@ -27,47 +26,36 @@ export function normalizeString(str: string): string {
 /**
  * 案件同一性キー（tender_canonical_id）を生成
  * 
- * 優先順位：
- * 1. 公式の公告番号/案件番号が取れる場合はそれ
- * 2. 取れない場合は「安定した詳細URL」
- * 3. それも不安定な場合は「発注機関＋案件名＋種別」の正規化文字列ハッシュ（最終手段）
+ * 新ロジック仕様：
+ * tenderCanonicalId = 案件番号
+ * 
+ * 案件番号は三重県入札サイト上で一意かつ不変であることを前提とする
+ * ただし、念のため発注機関コードと組み合わせて一意性を保証する
  */
 export function generateTenderCanonicalId(bidding: Partial<Bidding>): string {
-  // 1. 公告番号がある場合（現状のスキーマには無いが、将来追加される可能性）
-  // if (bidding.announcementNumber) {
-  //   return `ann-${normalizeString(bidding.announcementNumber)}`;
-  // }
-
-  // 2. 詳細URLがある場合（安定していると仮定）
-  if (bidding.detailUrl) {
-    // URLから一意な部分を抽出してハッシュ化
-    const urlHash = crypto
-      .createHash("sha256")
-      .update(normalizeString(bidding.detailUrl))
-      .digest("hex")
-      .substring(0, 16);
-    return `url-${urlHash}`;
+  // 案件番号が存在する場合
+  if (bidding.caseNumber) {
+    // 発注機関コードがある場合は組み合わせて一意性を保証
+    if (bidding.orderOrganCode) {
+      return `${normalizeString(bidding.orderOrganCode)}-${normalizeString(bidding.caseNumber)}`;
+    }
+    // 案件番号のみの場合
+    return normalizeString(bidding.caseNumber);
   }
 
-  // 3. 最終手段：発注機関＋案件名＋種別の正規化文字列ハッシュ
-  const compositeKey = [
-    normalizeString(bidding.orderOrganName || ""),
-    normalizeString(bidding.title || ""),
-    normalizeString(bidding.constructionType || ""),
-  ].join("|");
+  // 案件番号が取得できない場合（エラーケース）
+  // 詳細URLをフォールバックとして使用
+  if (bidding.detailUrl) {
+    return `url-${normalizeString(bidding.detailUrl)}`;
+  }
 
-  const compositeHash = crypto
-    .createHash("sha256")
-    .update(compositeKey)
-    .digest("hex")
-    .substring(0, 16);
-
-  return `composite-${compositeHash}`;
+  // 最終手段：案件名＋発注機関名
+  const fallbackKey = `${normalizeString(bidding.orderOrganName || "")}-${normalizeString(bidding.title || "")}`;
+  return `fallback-${fallbackKey}`;
 }
 
 /**
  * キーワードがOR条件で一致するかチェック
- * MVP仕様書 3.2.2節に基づく実装
  */
 export function matchesKeywords(title: string, keywords: string[]): boolean {
   if (!keywords || keywords.length === 0) {
@@ -118,8 +106,19 @@ export function matchesProjectType(constructionType: string, projectType?: strin
 }
 
 /**
+ * タイトル（案件名）が変更されたかチェック
+ * 新ロジック仕様：更新判定はタイトル差分のみで行う
+ */
+export function detectTitleChange(oldTitle: string, newTitle: string): boolean {
+  const oldNormalized = normalizeString(oldTitle);
+  const newNormalized = normalizeString(newTitle);
+  
+  return oldNormalized !== newNormalized;
+}
+
+/**
  * 案件が更新されたかチェック（差分判定）
- * MVP仕様書 3.5.2節に基づく実装
+ * 新ロジック仕様：タイトル変更のみで更新判定
  */
 export function detectChanges(oldBidding: Bidding, newBidding: Partial<Bidding>): {
   hasChanges: boolean;
@@ -127,22 +126,9 @@ export function detectChanges(oldBidding: Bidding, newBidding: Partial<Bidding>)
 } {
   const changedFields: string[] = [];
 
-  // 差分判定対象フィールド
-  const fieldsToCheck = [
-    { key: "title", label: "案件名" },
-    { key: "orderOrganName", label: "発注機関" },
-    { key: "applicationDeadline", label: "締切日" },
-    { key: "openingDate", label: "開札日" },
-    { key: "detailUrl", label: "詳細URL" },
-  ] as const;
-
-  for (const field of fieldsToCheck) {
-    const oldValue = normalizeString(String(oldBidding[field.key] || ""));
-    const newValue = normalizeString(String(newBidding[field.key] || ""));
-    
-    if (oldValue !== newValue) {
-      changedFields.push(field.label);
-    }
+  // タイトル変更のみチェック
+  if (newBidding.title && detectTitleChange(oldBidding.title, newBidding.title)) {
+    changedFields.push("案件名");
   }
 
   return {
@@ -152,28 +138,9 @@ export function detectChanges(oldBidding: Bidding, newBidding: Partial<Bidding>)
 }
 
 /**
- * 更新ハッシュを生成（更新通知の重複防止用）
- * MVP仕様書 3.5.3節に基づく実装
- */
-export function generateUpdateHash(bidding: Partial<Bidding>): string {
-  const updateKey = [
-    normalizeString(bidding.title || ""),
-    normalizeString(bidding.orderOrganName || ""),
-    normalizeString(String(bidding.applicationDeadline || "")),
-    normalizeString(String(bidding.openingDate || "")),
-    normalizeString(bidding.detailUrl || ""),
-  ].join("|");
-
-  return crypto
-    .createHash("sha256")
-    .update(updateKey)
-    .digest("hex")
-    .substring(0, 16);
-}
-
-/**
  * 重要な変更を検出
  * 締切日、予定価格、開札日などの重要な項目の変更を検出する
+ * （参考情報として保持、通知判定には使用しない）
  */
 export interface ImportantChange {
   field: string;

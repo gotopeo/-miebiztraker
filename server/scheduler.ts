@@ -3,6 +3,7 @@ import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from
 import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting, getActiveNotificationSubscriptions } from './db';
 import { runNotificationCheck } from './notificationJob';
 import { detectNewBiddings } from './newBiddingDetector';
+import { runCleanupJob } from './cleanupJob';
 
 /**
  * スケジューラーサービス
@@ -36,8 +37,41 @@ export async function initializeScheduler() {
     
     // 通知ジョブのスケジュールを登録
     await initializeNotificationSchedules();
+    
+    // クリーンアップジョブのスケジュールを登録（毎日03:00 JST）
+    initializeCleanupSchedule();
   } catch (error) {
     console.error('[Scheduler] Failed to initialize:', error);
+  }
+}
+
+/**
+ * クリーンアップジョブのスケジュールを初期化（毎日03:00 JST）
+ */
+function initializeCleanupSchedule() {
+  console.log('[Scheduler] Initializing cleanup schedule...');
+  
+  // JST 03:00 = UTC 18:00 (前日)
+  const cronExpr = '0 18 * * *'; // 毎日18:00 UTC
+  
+  try {
+    const spec: schedule.RecurrenceSpecDateRange = {
+      rule: cronExpr,
+      tz: 'Etc/UTC'
+    };
+    
+    const job = schedule.scheduleJob(spec, async () => {
+      console.log('[Scheduler] Executing cleanup job at 03:00 JST');
+      await runCleanupJob();
+    });
+    
+    if (job) {
+      console.log(`[Scheduler] Registered cleanup schedule: 03:00 JST (${cronExpr} UTC)`);
+      const nextExec = job.nextInvocation();
+      console.log(`[Scheduler] Next cleanup: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+    }
+  } catch (error) {
+    console.error('[Scheduler] Failed to register cleanup schedule:', error);
   }
 }
 

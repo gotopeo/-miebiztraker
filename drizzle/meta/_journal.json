@@ -50,6 +50,13 @@
       "when": 1769497412419,
       "tag": "0006_massive_mach_iv",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1769515316624,
+      "tag": "0007_daffy_slipstream",
+      "breakpoints": true
     }
   ]
 }

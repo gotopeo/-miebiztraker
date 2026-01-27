@@ -114,8 +114,10 @@ export const biddings = mysqlTable("biddings", {
   lastSeenAt: timestamp("lastSeenAt").notNull(),
   /** 作成日時 */
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  /** 更新日時 */
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  /** バージョン番号（更新回数） */
+  version: int("version").default(0).notNull(),
+  /** 更新日時（手動更新） */
+  updatedAt: timestamp("updatedAt"),
 }, (table) => ({
   caseNumberIdx: index("caseNumber_idx").on(table.caseNumber),
   tenderCanonicalIdIdx: index("tenderCanonicalId_idx").on(table.tenderCanonicalId),
@@ -380,6 +382,8 @@ export const notificationLogs = mysqlTable("notificationLogs", {
   tenderCanonicalId: varchar("tenderCanonicalId", { length: 255 }).notNull(),
   /** 通知タイプ（NEW: 新規, UPDATE: 更新） */
   notificationType: mysqlEnum("notificationType", ["NEW", "UPDATE"]).notNull(),
+  /** 通知した案件のバージョン（更新通知の場合のみ） */
+  tenderVersion: int("tenderVersion"),
   /** 通知した案件数 */
   biddingCount: int("biddingCount").notNull(),
   /** 通知した案件ID（カンマ区切り） */
@@ -400,12 +404,20 @@ export const notificationLogs = mysqlTable("notificationLogs", {
   userIdIdx: index("userId_idx").on(table.userId),
   subscriptionIdIdx: index("subscriptionId_idx").on(table.subscriptionId),
   notifiedAtIdx: index("notifiedAt_idx").on(table.notifiedAt),
-  // 重複防止用のユニークインデックス
-  uniqueNotificationIdx: uniqueIndex("unique_notification_idx").on(
+  // 重複防止用のユニークインデックス（NEW通知用）
+  uniqueNewNotificationIdx: uniqueIndex("unique_new_notification_idx").on(
     table.userId,
     table.subscriptionId,
     table.tenderCanonicalId,
     table.notificationType
+  ),
+  // 重複防止用のユニークインデックス（UPDATE通知用、バージョン含む）
+  uniqueUpdateNotificationIdx: uniqueIndex("unique_update_notification_idx").on(
+    table.userId,
+    table.subscriptionId,
+    table.tenderCanonicalId,
+    table.notificationType,
+    table.tenderVersion
   ),
 }));
 

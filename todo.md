@@ -380,7 +380,7 @@
 - [ ] ログで実行状況を確認
 
 ### フェーズ4: チェックポイント作成
-- [ ] チェックポイントを作成
+- [x] チェックポイントを作成（version: 88816fc2）
 
 
 ### スクレイピング失敗の調査
@@ -412,6 +412,65 @@
 - [x] 通知テストが成功し、LINEに通知が届いた
 
 ### フェーズ4: チェックポイント作成
-- [ ] チェックポイントを作成
+- [x] チェックポイントを作成（version: 88816fc2）
 
 - [x] 通知時刻の選択範囲を0:00～23:00に拡張
+
+---
+
+## 新通知ロジックへの完全移行
+
+### フェーズ1: データベーススキーマの変更
+- [x] biddingsテーブルに`version`カラムを追加（INT, DEFAULT 0）
+- [x] biddingsテーブルの`updatedAt`カラムを手動更新に変更（onUpdateNow削除）
+- [x] notification_logsテーブルに`tenderVersion`カラムを追加（INT, NULLABLE）
+- [x] notification_logsのユニークインデックスを再作成（tenderVersionを含む）
+- [x] マイグレーション実行（pnpm db:push）
+
+### フェーズ2: 案件同一性キー生成ロジックの変更
+- [x] tenderIdentity.tsの`generateTenderCanonicalId`を案件番号ベースに変更
+- [x] 発注機関コード+案件番号の組み合わせで一意性を保証
+- [x] 既存の複雑なハッシュ生成ロジックを削除
+
+### フェーズ3: スクレイピング処理のUpsertロジック実装
+- [x] 新規案件の場合：firstSeenAt, lastSeenAt, version=0を設定
+- [x] 既存案件の場合：lastSeenAtを更新
+- [x] タイトル変更検出時：title, version++, updatedAtを更新
+- [x] スクレイピング処理にUpsertロジックを統合
+
+### フェーズ4: 通知ジョブロジックの変更（時間窓方式）
+- [x] subscription.last_notified_atを基準とした時間窓方式に変更
+- [x] 新規候補：firstSeenAt > since AND firstSeenAt <= until
+- [x] 更新候補：updatedAt > since AND updatedAt <= until
+- [x] new優先ルール実装（同一案件がnewとupdateの両方に該当する場合、newのみ通知）
+- [x] 初回通知抑制ロジックの調整（最新10件、max(firstSeenAt, updatedAt)でソート）
+
+### フェーズ5: 重複チェックロジックの変更
+- [x] new通知：(userId, subscriptionId, tenderCanonicalId, notificationType='NEW')
+- [x] update通知：(userId, subscriptionId, tenderCanonicalId, notificationType='UPDATE', tenderVersion)
+- [x] getAlreadySentNotifications関数をtenderVersion対応に変更
+
+### フェーズ6: DB肥大化対策の実装
+- [x] クリーンアップジョブを実装（毎日03:00実行）
+- [x] TTL削除：lastSeenAt < now - 180日の案件を削除
+- [x] 件数上限削除：20,000件を超えたら古い順に削除
+- [x] scheduler.tsにクリーンアップジョブを統合
+
+### フェーズ7: 既存データの移行処理
+- [x] 既存案件のtenderCanonicalIdを案件番号ベースに再生成
+- [x] 既存案件のversionを0に初期化
+- [x] 既存案件のfirstSeenAtとlastSeenAtを適切に設定（既に設定済み）
+- [x] notification_logsのtenderCanonicalIdを新形式に更新（新ロジックで自動解決）
+- [x] データ移行スクリプトを作成・実行（76件の案件を移行完了）
+
+### フェーズ8: テストの更新と動作確認
+- [x] サーバー再起動確認（クリーンアップジョブが正常に登録された）
+- [x] ダッシュボード表示確認（正常動作）
+- [x] 既存データの移行確認（76件の案件が新形式にtenderCanonicalIdに変換済み）
+- [x] 新ロジックの実装完了（実際の動作テストは次回スクレイピング時に実施）
+- [ ] 全テストを実行して成功を確認
+
+### フェーズ9: チェックポイント保存とユーザーへの報告
+- [ ] 実装完了レポートを作成
+- [ ] チェックポイントを作成
+- [ ] ユーザーに移行完了を報告
