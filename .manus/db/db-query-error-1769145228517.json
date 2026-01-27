@@ -1,0 +1,8 @@
+{
+  "query": "SELECT \n  DATE(created_at) as date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(created_at) = '2026-01-23'\nGROUP BY DATE(created_at);\n\nSELECT \n  DATE(publication_date) as pub_date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(publication_date) = '2026-01-23'\nGROUP BY DATE(publication_date);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT \n  DATE(created_at) as date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(created_at) = '2026-01-23'\nGROUP BY DATE(created_at);\n\nSELECT \n  DATE(publication_date) as pub_date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(publication_date) = '2026-01-23'\nGROUP BY DATE(publication_date);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'created_at' in 'group statement'"
+  ]
+}

@@ -2,6 +2,7 @@ import * as schedule from 'node-schedule';
 import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from './scraper';
 import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting, getActiveNotificationSubscriptions } from './db';
 import { runNotificationCheck } from './notificationJob';
+import { detectNewBiddings } from './newBiddingDetector';
 
 /**
  * スケジューラーサービス
@@ -242,6 +243,7 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
   let status: 'success' | 'running' | 'failed' = 'success';
   let errorMessage: string | null = null;
   let itemsCount = 0;
+  let newItemsCount = 0;
   
   try {
     console.log(`[Scheduler] Starting scraping for schedule: ${scheduleName}`);
@@ -255,8 +257,12 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
     
     if (itemsCount > 0) {
       const insertItems = result.items.map(convertToInsertBidding);
-      await insertBiddingsBatch(insertItems);
-      console.log(`[Scheduler] Successfully scraped and saved ${itemsCount} items`);
+      
+      // 新規案件検出と保存
+      const { newBiddings, updatedBiddings } = await detectNewBiddings(insertItems);
+      newItemsCount = newBiddings.length;
+      
+      console.log(`[Scheduler] Successfully scraped ${itemsCount} items (${newItemsCount} new, ${updatedBiddings.length} updated)`);
     } else {
       console.log('[Scheduler] No items found during scraping');
     }
@@ -276,7 +282,7 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
         finishedAt: new Date(),
         status,
         itemsScraped: itemsCount,
-        newItems: 0, // TODO: 新規件数をカウントするロジックを追加
+        newItems: newItemsCount,
         errorMessage,
       });
     } catch (logError) {

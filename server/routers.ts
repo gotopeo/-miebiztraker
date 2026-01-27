@@ -31,6 +31,8 @@ import {
   updateNotificationSubscription,
   deleteNotificationSubscription,
   getNotificationLogs,
+  getAllIssuers,
+  getIssuersByIds,
 } from "./db";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
 import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
@@ -664,6 +666,22 @@ export const appRouter = router({
         // 通知履歴を記録（テスト通知は履歴に記録しない）
 
         return { success: true, message: "テスト通知を送信しました" };
+      }),
+  }),
+
+  // 発注機関マスター関連API
+  issuers: router({
+    // 発注機関一覧取得
+    list: protectedProcedure
+      .query(async () => {
+        return await getAllIssuers();
+      }),
+
+    // 複数IDで発注機関を取得
+    getByIds: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .query(async ({ input }) => {
+        return await getIssuersByIds(input.ids);
       }),
   }),
 });

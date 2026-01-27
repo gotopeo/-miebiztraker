@@ -3,6 +3,9 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
   users,
+  issuers,
+  Issuer,
+  InsertIssuer,
   biddings,
   Bidding,
   InsertBidding,
@@ -682,4 +685,103 @@ export async function getNotificationLogs(userId: number, limit: number = 50): P
     .where(eq(notificationLogs.userId, userId))
     .orderBy(desc(notificationLogs.notifiedAt))
     .limit(limit);
+}
+
+/**
+ * 通知履歴の重複チェック
+ * @param userId ユーザーID
+ * @param subscriptionId 通知設定ID
+ * @param tenderCanonicalId 案件同一性キー
+ * @returns 既に通知済みの場合true
+ */
+export async function isNotificationAlreadySent(
+  userId: number,
+  subscriptionId: number,
+  tenderCanonicalId: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const results = await db.select()
+    .from(notificationLogs)
+    .where(
+      and(
+        eq(notificationLogs.userId, userId),
+        eq(notificationLogs.subscriptionId, subscriptionId),
+        eq(notificationLogs.tenderCanonicalId, tenderCanonicalId)
+      )
+    )
+    .limit(1);
+
+  return results.length > 0;
+}
+
+/**
+ * 複数案件の重複チェック（バッチ処理用）
+ * @param userId ユーザーID
+ * @param subscriptionId 通知設定ID
+ * @param tenderCanonicalIds 案件同一性キーの配列
+ * @returns 通知済みの案件同一性キーの配列
+ */
+export async function getAlreadySentNotifications(
+  userId: number,
+  subscriptionId: number,
+  tenderCanonicalIds: string[]
+): Promise<string[]> {
+  const db = await getDb();
+  if (!db || tenderCanonicalIds.length === 0) return [];
+
+  const results = await db.select()
+    .from(notificationLogs)
+    .where(
+      and(
+        eq(notificationLogs.userId, userId),
+        eq(notificationLogs.subscriptionId, subscriptionId),
+        sql`${notificationLogs.tenderCanonicalId} IN (${sql.join(tenderCanonicalIds.map(id => sql`${id}`), sql`, `)})`
+      )
+    );
+
+  return results.map(log => log.tenderCanonicalId);
+}
+
+// ==================== 発注機関マスター関連 ====================
+
+/**
+ * 全ての発注機関を取得（表示順でソート）
+ */
+export async function getAllIssuers(): Promise<Issuer[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(issuers)
+    .where(eq(issuers.isActive, true))
+    .orderBy(issuers.sortOrder);
+}
+
+/**
+ * IDで発注機関を取得
+ */
+export async function getIssuerById(id: number): Promise<Issuer | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db.select()
+    .from(issuers)
+    .where(eq(issuers.id, id))
+    .limit(1);
+
+  return results[0] || null;
+}
+
+/**
+ * 複数IDで発注機関を取得
+ */
+export async function getIssuersByIds(ids: number[]): Promise<Issuer[]> {
+  const db = await getDb();
+  if (!db || ids.length === 0) return [];
+
+  return await db.select()
+    .from(issuers)
+    .where(sql`${issuers.id} IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`);
 }

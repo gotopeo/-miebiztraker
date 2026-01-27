@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +16,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader2, Plus, Pencil, Trash2, Bell, BellOff, AlertCircle, Send } from "lucide-react";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
 interface NotificationFormData {
   name: string;
-  orderOrganCodes: string;
+  issuerIds: number[];
+  projectType: string;
   publicationDateDays: string;
   updateDateDays: string;
   keywords: string;
@@ -33,7 +35,8 @@ interface NotificationFormData {
 
 const initialFormData: NotificationFormData = {
   name: "",
-  orderOrganCodes: "",
+  issuerIds: [],
+  projectType: "",
   publicationDateDays: "",
   updateDateDays: "",
   keywords: "",
@@ -50,6 +53,16 @@ export default function NotificationSettings() {
 
   const { data: subscriptions, isLoading, refetch } = trpc.notifications.list.useQuery();
   const { data: lineConnection } = trpc.line.getConnection.useQuery();
+  const { data: issuers } = trpc.issuers.list.useQuery();
+
+  // 発注機関オプションを生成
+  const issuerOptions = useMemo(() => {
+    if (!issuers) return [];
+    return issuers.map((issuer) => ({
+      label: issuer.name,
+      value: String(issuer.id),
+    }));
+  }, [issuers]);
   const createMutation = trpc.notifications.create.useMutation();
   const updateMutation = trpc.notifications.update.useMutation();
   const deleteMutation = trpc.notifications.delete.useMutation();
@@ -61,7 +74,8 @@ export default function NotificationSettings() {
     try {
       const payload = {
         name: formData.name,
-        orderOrganCodes: formData.orderOrganCodes || undefined,
+        issuerIds: formData.issuerIds.length > 0 ? formData.issuerIds.join(",") : undefined,
+        projectType: formData.projectType || undefined,
         publicationDateDays: formData.publicationDateDays ? parseInt(formData.publicationDateDays) : undefined,
         updateDateDays: formData.updateDateDays ? parseInt(formData.updateDateDays) : undefined,
         keywords: formData.keywords || undefined,
@@ -93,7 +107,8 @@ export default function NotificationSettings() {
     setEditingId(subscription.id);
     setFormData({
       name: subscription.name,
-      orderOrganCodes: subscription.orderOrganCodes || "",
+      issuerIds: subscription.issuerIds ? subscription.issuerIds.split(",").map(Number) : [],
+      projectType: subscription.projectType || "",
       publicationDateDays: subscription.publicationDateDays?.toString() || "",
       updateDateDays: subscription.updateDateDays?.toString() || "",
       keywords: subscription.keywords || "",
@@ -197,17 +212,31 @@ export default function NotificationSettings() {
                   />
                 </div>
 
-                {/* 発注機関コード */}
+                {/* 発注機関選択 */}
                 <div className="space-y-2">
-                  <Label htmlFor="orderOrganCodes">発注機関コード</Label>
-                  <Input
-                    id="orderOrganCodes"
-                    value={formData.orderOrganCodes}
-                    onChange={(e) => setFormData({ ...formData, orderOrganCodes: e.target.value })}
-                    placeholder="複数の場合はカンマ区切り（例: 001,002）"
+                  <Label>発注機関</Label>
+                  <MultiSelect
+                    options={issuerOptions}
+                    selected={formData.issuerIds.map(String)}
+                    onChange={(selected) => setFormData({ ...formData, issuerIds: selected.map(Number) })}
+                    placeholder="発注機関を選択"
                   />
                   <p className="text-xs text-muted-foreground">
-                    空欄の場合は全ての発注機関が対象になります
+                    未選択の場合は全ての発注機関が対象になります
+                  </p>
+                </div>
+
+                {/* 工種/委託種別 */}
+                <div className="space-y-2">
+                  <Label htmlFor="projectType">工種/委託種別</Label>
+                  <Input
+                    id="projectType"
+                    value={formData.projectType}
+                    onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
+                    placeholder="例: 土木一式、建築一式"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    部分一致で検索されます（空欄の場合は全ての種別が対象）
                   </p>
                 </div>
 
@@ -244,6 +273,9 @@ export default function NotificationSettings() {
                     onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
                     placeholder="複数の場合はカンマ区切り（例: 道路,橋梁）"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    複数指定時はOR条件（いずれか1つでも含まれれば一致）
+                  </p>
                 </div>
 
                 {/* 格付 */}

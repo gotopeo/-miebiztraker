@@ -1,0 +1,17 @@
+{
+  "query": "SELECT \n  DATE(createdAt) as date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(createdAt) = '2026-01-23'\nGROUP BY DATE(createdAt);\n\nSELECT \n  DATE(publicationDate) as pub_date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(publicationDate) = '2026-01-23'\nGROUP BY DATE(publicationDate);\n\nSELECT COUNT(*) as total_count FROM biddings;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT \n  DATE(createdAt) as date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(createdAt) = '2026-01-23'\nGROUP BY DATE(createdAt);\n\nSELECT \n  DATE(publicationDate) as pub_date,\n  COUNT(*) as count\nFROM biddings\nWHERE DATE(publicationDate) = '2026-01-23'\nGROUP BY DATE(publicationDate);\n\nSELECT COUNT(*) as total_count FROM biddings;",
+  "rows": [
+    {
+      "date": "2026-01-23",
+      "count": "23"
+    }
+  ],
+  "messages": [
+    "total_count",
+    "111"
+  ],
+  "stdout": "date\tcount\n2026-01-23\t23\ntotal_count\n111\n",
+  "stderr": "",
+  "execution_time_ms": 1930
+}

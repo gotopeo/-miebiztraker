@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -19,6 +19,34 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * 発注機関マスターテーブル
+ * 三重県の発注機関一覧
+ */
+export const issuers = mysqlTable("issuers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** 発注機関名 */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** 発注機関コード（スクレイピング時の識別用） */
+  code: varchar("code", { length: 50 }).unique(),
+  /** 分類（例: 「県土整備部」） */
+  category: varchar("category", { length: 100 }),
+  /** 表示順序 */
+  sortOrder: int("sortOrder").default(0).notNull(),
+  /** 有効/無効 */
+  isActive: boolean("isActive").default(true).notNull(),
+  /** 作成日時 */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  /** 更新日時 */
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  sortOrderIdx: index("sortOrder_idx").on(table.sortOrder),
+  isActiveIdx: index("isActive_idx").on(table.isActive),
+}));
+
+export type Issuer = typeof issuers.$inferSelect;
+export type InsertIssuer = typeof issuers.$inferInsert;
+
+/**
  * 入札情報テーブル
  * 三重県入札サイトから取得した入札案件情報を保存
  */
@@ -26,6 +54,8 @@ export const biddings = mysqlTable("biddings", {
   id: int("id").autoincrement().primaryKey(),
   /** 案件番号（サイト上の一意識別子） */
   caseNumber: varchar("caseNumber", { length: 100 }).notNull(),
+  /** 案件同一性キー（新規判定用） */
+  tenderCanonicalId: varchar("tenderCanonicalId", { length: 255 }).notNull().unique(),
   /** 案件名・工事名 */
   title: text("title").notNull(),
   /** 発注機関コード */
@@ -60,6 +90,8 @@ export const biddings = mysqlTable("biddings", {
   publicationDate: timestamp("publicationDate"),
   /** 更新日 */
   updateDate: timestamp("updateDate"),
+  /** サイトから取得した最終更新日 */
+  lastUpdatedAtSource: timestamp("lastUpdatedAtSource"),
   /** 履行場所（詳細） */
   performLocation: text("performLocation"),
   /** 備考 */
@@ -76,15 +108,21 @@ export const biddings = mysqlTable("biddings", {
   notified: boolean("notified").default(false).notNull(),
   /** 初回取得日時（スクレイピングで初めて取得された日時） */
   firstScrapedAt: timestamp("firstScrapedAt"),
+  /** システムが初めて観測した日時 */
+  firstSeenAt: timestamp("firstSeenAt").notNull(),
+  /** システムが最後に観測した日時 */
+  lastSeenAt: timestamp("lastSeenAt").notNull(),
   /** 作成日時 */
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   /** 更新日時 */
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   caseNumberIdx: index("caseNumber_idx").on(table.caseNumber),
+  tenderCanonicalIdIdx: index("tenderCanonicalId_idx").on(table.tenderCanonicalId),
   biddingDateIdx: index("biddingDate_idx").on(table.biddingDate),
   orderOrganCodeIdx: index("orderOrganCode_idx").on(table.orderOrganCode),
   isNewIdx: index("isNew_idx").on(table.isNew),
+  firstSeenAtIdx: index("firstSeenAt_idx").on(table.firstSeenAt),
 }));
 
 export type Bidding = typeof biddings.$inferSelect;
@@ -291,6 +329,10 @@ export const notificationSubscriptions = mysqlTable("notificationSubscriptions",
   name: varchar("name", { length: 200 }).notNull(),
   /** 発注機関コード（カンマ区切り、空の場合は全て） */
   orderOrganCodes: text("orderOrganCodes"),
+  /** 発注機関ID（JSON配列、例: [1,5,12]） */
+  issuerIds: text("issuerIds"),
+  /** 工種/委託種別（"工事", "委託", "両方"） */
+  projectType: varchar("projectType", { length: 50 }),
   /** 公告日フィルター（日数、例: 7 = 過去7日間） */
   publicationDateDays: int("publicationDateDays"),
   /** 更新日フィルター（日数、例: 3 = 過去3日間） */
@@ -305,6 +347,8 @@ export const notificationSubscriptions = mysqlTable("notificationSubscriptions",
   estimatedPriceMax: decimal("estimatedPriceMax", { precision: 15, scale: 2 }),
   /** 通知時刻（カンマ区切り、例: "08:00,12:00,17:00"） */
   notificationTimes: varchar("notificationTimes", { length: 200 }).notNull(),
+  /** 初回通知済みフラグ */
+  isFirstNotificationSent: boolean("isFirstNotificationSent").default(false).notNull(),
   /** 有効/無効 */
   enabled: boolean("enabled").default(true).notNull(),
   /** 最終通知日時 */
@@ -330,6 +374,10 @@ export const notificationLogs = mysqlTable("notificationLogs", {
   userId: int("userId").notNull(),
   /** 通知設定ID */
   subscriptionId: int("subscriptionId").notNull(),
+  /** 通知した案件の同一性キー */
+  tenderCanonicalId: varchar("tenderCanonicalId", { length: 255 }).notNull(),
+  /** 通知タイプ（NEW: 新規, UPDATE: 更新） */
+  notificationType: mysqlEnum("notificationType", ["NEW", "UPDATE"]).notNull(),
   /** 通知した案件数 */
   biddingCount: int("biddingCount").notNull(),
   /** 通知した案件ID（カンマ区切り） */
@@ -338,6 +386,10 @@ export const notificationLogs = mysqlTable("notificationLogs", {
   status: mysqlEnum("status", ["success", "failed"]).notNull(),
   /** エラーメッセージ */
   errorMessage: text("errorMessage"),
+  /** 送信日時 */
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  /** 通知メッセージ内容 */
+  messageContent: text("messageContent"),
   /** 通知日時 */
   notifiedAt: timestamp("notifiedAt").defaultNow().notNull(),
   /** 作成日時 */
@@ -346,6 +398,13 @@ export const notificationLogs = mysqlTable("notificationLogs", {
   userIdIdx: index("userId_idx").on(table.userId),
   subscriptionIdIdx: index("subscriptionId_idx").on(table.subscriptionId),
   notifiedAtIdx: index("notifiedAt_idx").on(table.notifiedAt),
+  // 重複防止用のユニークインデックス
+  uniqueNotificationIdx: uniqueIndex("unique_notification_idx").on(
+    table.userId,
+    table.subscriptionId,
+    table.tenderCanonicalId,
+    table.notificationType
+  ),
 }));
 
 export type NotificationLog = typeof notificationLogs.$inferSelect;

@@ -3,7 +3,8 @@ import {
   getLineConnectionByUserId,
   searchBiddings,
   insertNotificationLog,
-  updateNotificationSubscription
+  updateNotificationSubscription,
+  getAlreadySentNotifications
 } from "./db";
 import { sendLineTextMessage } from "./_core/line";
 
@@ -95,6 +96,8 @@ async function processSubscription(subscription: any): Promise<void> {
   }
 
   // 新着案件のみ（最終通知日時以降）
+  const isFirstNotification = !subscription.isFirstNotificationSent;
+  
   if (subscription.lastNotifiedAt) {
     filters.createdAtFrom = new Date(subscription.lastNotifiedAt);
   } else {
@@ -105,11 +108,23 @@ async function processSubscription(subscription: any): Promise<void> {
   }
 
   // 案件を検索
-  const biddings = await searchBiddings({
+  let biddings = await searchBiddings({
     ...filters,
-    limit: 50, // 最大50件
+    limit: isFirstNotification ? 10 : 50, // 初回は10件、通常は50件
     offset: 0,
   });
+
+  // 初回通知の場合、最新10件に制限（公告日降順）
+  if (isFirstNotification && biddings.length > 0) {
+    biddings = biddings
+      .sort((a, b) => {
+        const aDate = a.publicationDate || a.updateDate || a.createdAt;
+        const bDate = b.publicationDate || b.updateDate || b.createdAt;
+        if (!aDate || !bDate) return 0;
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      })
+      .slice(0, 10);
+  }
 
   console.log(`[Notification Job] Found ${biddings.length} matching biddings for subscription ${subscription.id}`);
 
@@ -121,35 +136,70 @@ async function processSubscription(subscription: any): Promise<void> {
     return;
   }
 
-  // LINE通知を送信
-  try {
-    const message = formatNotificationMessage(subscription.name, biddings);
-    await sendLineTextMessage(lineConnection.lineUserId, message);
+  // 重複チェック: 既に通知済みの案件を除外
+  const tenderCanonicalIds = biddings
+    .map(b => b.tenderCanonicalId)
+    .filter((id): id is string => !!id);
+  
+  const alreadySent = await getAlreadySentNotifications(
+    subscription.userId,
+    subscription.id,
+    tenderCanonicalIds
+  );
 
-    // 通知履歴を記録
-    await insertNotificationLog({
-      userId: subscription.userId,
-      subscriptionId: subscription.id,
-      biddingCount: biddings.length,
-      biddingIds: biddings.map((b) => b.id).join(","),
-      status: "success",
-    });
+  // 未通知の案件のみにフィルタリング
+  const newBiddings = biddings.filter(b => 
+    b.tenderCanonicalId && !alreadySent.includes(b.tenderCanonicalId)
+  );
 
-    // 最終通知日時を更新
+  console.log(`[Notification Job] ${newBiddings.length} new biddings after duplicate check (filtered ${alreadySent.length} duplicates)`);
+
+  if (newBiddings.length === 0) {
+    // 重複除外後に新着案件がない場合
     await updateNotificationSubscription(subscription.id, {
       lastNotifiedAt: new Date(),
+    });
+    return;
+  }
+
+  // LINE通知を送信
+  try {
+    const message = formatNotificationMessage(subscription.name, newBiddings);
+    await sendLineTextMessage(lineConnection.lineUserId, message);
+
+    // 通知履歴を記録（個別に記録して重複防止）
+    for (const bidding of newBiddings) {
+      if (bidding.tenderCanonicalId) {
+        await insertNotificationLog({
+          userId: subscription.userId,
+          subscriptionId: subscription.id,
+          tenderCanonicalId: bidding.tenderCanonicalId,
+          notificationType: "NEW",
+          biddingCount: 1,
+          biddingIds: bidding.id.toString(),
+          status: "success",
+        });
+      }
+    }
+
+    // 最終通知日時と初回通知フラグを更新
+    await updateNotificationSubscription(subscription.id, {
+      lastNotifiedAt: new Date(),
+      isFirstNotificationSent: true,
     });
 
     console.log(`[Notification Job] Successfully sent notification to user ${subscription.userId}`);
   } catch (error) {
     console.error(`[Notification Job] Failed to send notification:`, error);
 
-    // エラーを記録
+    // エラーを記録（バッチで記録）
     await insertNotificationLog({
       userId: subscription.userId,
       subscriptionId: subscription.id,
-      biddingCount: biddings.length,
-      biddingIds: biddings.map((b) => b.id).join(","),
+      tenderCanonicalId: newBiddings.map((b) => b.tenderCanonicalId || b.id.toString()).join(","),
+      notificationType: "NEW",
+      biddingCount: newBiddings.length,
+      biddingIds: newBiddings.map((b) => b.id).join(","),
       status: "failed",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
