@@ -5,7 +5,7 @@
 import { getDb } from "./db.js";
 import { biddings, Bidding, InsertBidding } from "../drizzle/schema.js";
 import { eq } from "drizzle-orm";
-import { generateTenderCanonicalId, detectChanges } from "./tenderIdentity.js";
+import { generateTenderCanonicalId, detectChanges, detectImportantChanges } from "./tenderIdentity.js";
 
 /**
  * 新規案件を検出して保存
@@ -13,9 +13,17 @@ import { generateTenderCanonicalId, detectChanges } from "./tenderIdentity.js";
  * @param scrapedBiddings スクレイピングで取得した案件リスト
  * @returns 新規案件と更新案件のリスト
  */
+export interface UpdatedBiddingWithChanges {
+  old: Bidding;
+  new: Bidding;
+  changedFields: string[];
+  hasImportantChanges: boolean;
+  importantChanges?: ReturnType<typeof detectImportantChanges>;
+}
+
 export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[]): Promise<{
   newBiddings: Bidding[];
-  updatedBiddings: Array<{ old: Bidding; new: Bidding; changedFields: string[] }>;
+  updatedBiddings: UpdatedBiddingWithChanges[];
 }> {
   const db = await getDb();
   if (!db) {
@@ -23,7 +31,7 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
   }
 
   const newBiddings: Bidding[] = [];
-  const updatedBiddings: Array<{ old: Bidding; new: Bidding; changedFields: string[] }> = [];
+  const updatedBiddings: UpdatedBiddingWithChanges[] = [];
   const now = new Date();
 
   for (const scrapedBidding of scrapedBiddings) {
@@ -88,10 +96,15 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
           .limit(1);
 
         if (updatedBidding) {
+          // 重要な変更を検出
+          const importantChangesResult = detectImportantChanges(existingBidding, scrapedBidding);
+          
           updatedBiddings.push({
             old: existingBidding,
             new: updatedBidding,
             changedFields,
+            hasImportantChanges: importantChangesResult.hasImportantChanges,
+            importantChanges: importantChangesResult.hasImportantChanges ? importantChangesResult : undefined,
           });
         }
       } else {

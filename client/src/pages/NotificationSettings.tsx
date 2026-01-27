@@ -31,6 +31,7 @@ interface NotificationFormData {
   estimatedPriceMin: string;
   estimatedPriceMax: string;
   notificationTimes: string;
+  enableUpdateNotification: boolean;
 }
 
 const initialFormData: NotificationFormData = {
@@ -44,6 +45,7 @@ const initialFormData: NotificationFormData = {
   estimatedPriceMin: "",
   estimatedPriceMax: "",
   notificationTimes: "08:00",
+  enableUpdateNotification: false,
 };
 
 export default function NotificationSettings() {
@@ -116,6 +118,7 @@ export default function NotificationSettings() {
       estimatedPriceMin: subscription.estimatedPriceMin || "",
       estimatedPriceMax: subscription.estimatedPriceMax || "",
       notificationTimes: subscription.notificationTimes || "08:00",
+      enableUpdateNotification: subscription.enableUpdateNotification || false,
     });
     setIsDialogOpen(true);
   };
@@ -312,6 +315,23 @@ export default function NotificationSettings() {
                     />
                   </div>
                 </div>
+
+                {/* 更新通知 */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="enableUpdateNotification"
+                    checked={formData.enableUpdateNotification}
+                    onChange={(e) => setFormData({ ...formData, enableUpdateNotification: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="enableUpdateNotification" className="font-normal cursor-pointer">
+                    更新通知を受け取る
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  既に通知した案件の重要な変更（締切日延長、予定価格変更など）も通知します
+                </p>
 
                 {/* 通知時刻 */}
                 <div className="space-y-2">

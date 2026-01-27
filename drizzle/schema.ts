@@ -349,6 +349,8 @@ export const notificationSubscriptions = mysqlTable("notificationSubscriptions",
   notificationTimes: varchar("notificationTimes", { length: 200 }).notNull(),
   /** 初回通知済みフラグ */
   isFirstNotificationSent: boolean("isFirstNotificationSent").default(false).notNull(),
+  /** 更新通知を有効にする */
+  enableUpdateNotification: boolean("enableUpdateNotification").default(false).notNull(),
   /** 有効/無効 */
   enabled: boolean("enabled").default(true).notNull(),
   /** 最終通知日時 */

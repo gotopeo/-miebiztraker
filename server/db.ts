@@ -726,20 +726,25 @@ export async function isNotificationAlreadySent(
 export async function getAlreadySentNotifications(
   userId: number,
   subscriptionId: number,
-  tenderCanonicalIds: string[]
+  tenderCanonicalIds: string[],
+  notificationType?: string
 ): Promise<string[]> {
   const db = await getDb();
   if (!db || tenderCanonicalIds.length === 0) return [];
 
+  const conditions = [
+    eq(notificationLogs.userId, userId),
+    eq(notificationLogs.subscriptionId, subscriptionId),
+    sql`${notificationLogs.tenderCanonicalId} IN (${sql.join(tenderCanonicalIds.map(id => sql`${id}`), sql`, `)})`
+  ];
+
+  if (notificationType) {
+    conditions.push(sql`${notificationLogs.notificationType} = ${notificationType}`);
+  }
+
   const results = await db.select()
     .from(notificationLogs)
-    .where(
-      and(
-        eq(notificationLogs.userId, userId),
-        eq(notificationLogs.subscriptionId, subscriptionId),
-        sql`${notificationLogs.tenderCanonicalId} IN (${sql.join(tenderCanonicalIds.map(id => sql`${id}`), sql`, `)})`
-      )
-    );
+    .where(and(...conditions));
 
   return results.map(log => log.tenderCanonicalId);
 }

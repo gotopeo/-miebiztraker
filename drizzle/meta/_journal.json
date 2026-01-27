@@ -43,6 +43,13 @@
       "when": 1769490650845,
       "tag": "0005_even_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769497412419,
+      "tag": "0006_massive_mach_iv",
+      "breakpoints": true
     }
   ]
 }

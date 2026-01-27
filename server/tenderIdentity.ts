@@ -170,3 +170,150 @@ export function generateUpdateHash(bidding: Partial<Bidding>): string {
     .digest("hex")
     .substring(0, 16);
 }
+
+/**
+ * 重要な変更を検出
+ * 締切日、予定価格、開札日などの重要な項目の変更を検出する
+ */
+export interface ImportantChange {
+  field: string;
+  fieldLabel: string;
+  oldValue: string | null;
+  newValue: string | null;
+  importance: "high" | "medium";
+}
+
+export interface ImportantChangesResult {
+  hasImportantChanges: boolean;
+  changes: ImportantChange[];
+}
+
+export function detectImportantChanges(
+  oldBidding: Bidding,
+  newBidding: Partial<Bidding>
+): ImportantChangesResult {
+  const changes: ImportantChange[] = [];
+
+  // 重要度: 高
+  const highImportanceFields = [
+    { key: "applicationDeadline" as keyof Bidding, label: "締切日", formatter: formatDate },
+    { key: "openingDate" as keyof Bidding, label: "開札日", formatter: formatDate },
+    { key: "estimatedPrice" as keyof Bidding, label: "予定価格", formatter: formatPrice },
+    { key: "minimumPrice" as keyof Bidding, label: "最低制限価格", formatter: formatPrice },
+  ];
+
+  // 重要度: 中
+  const mediumImportanceFields = [
+    { key: "title" as keyof Bidding, label: "案件名", formatter: (v: any) => String(v || "") },
+    { key: "location" as keyof Bidding, label: "工事場所", formatter: (v: any) => String(v || "") },
+    { key: "constructionPeriod" as keyof Bidding, label: "工期", formatter: (v: any) => String(v || "") },
+    { key: "rating" as keyof Bidding, label: "格付", formatter: (v: any) => String(v || "") },
+  ];
+
+  // 重要度: 高の変更をチェック
+  for (const field of highImportanceFields) {
+    const oldValue = oldBidding[field.key];
+    const newValue = newBidding[field.key];
+
+    if (hasChanged(oldValue, newValue)) {
+      changes.push({
+        field: field.key,
+        fieldLabel: field.label,
+        oldValue: field.formatter(oldValue),
+        newValue: field.formatter(newValue),
+        importance: "high",
+      });
+    }
+  }
+
+  // 重要度: 中の変更をチェック
+  for (const field of mediumImportanceFields) {
+    const oldValue = oldBidding[field.key];
+    const newValue = newBidding[field.key];
+
+    if (hasChanged(oldValue, newValue)) {
+      changes.push({
+        field: field.key,
+        fieldLabel: field.label,
+        oldValue: field.formatter(oldValue),
+        newValue: field.formatter(newValue),
+        importance: "medium",
+      });
+    }
+  }
+
+  return {
+    hasImportantChanges: changes.length > 0,
+    changes,
+  };
+}
+
+/**
+ * 値が変更されたかチェック
+ */
+function hasChanged(oldValue: any, newValue: any): boolean {
+  // 両方nullまたはundefinedの場合は変更なし
+  if ((oldValue == null) && (newValue == null)) {
+    return false;
+  }
+
+  // 一方だけnullまたはundefinedの場合は変更あり
+  if ((oldValue == null) !== (newValue == null)) {
+    return true;
+  }
+
+  // 日付の場合
+  if (oldValue instanceof Date && newValue instanceof Date) {
+    return oldValue.getTime() !== newValue.getTime();
+  }
+
+  // 文字列の場合は正規化して比較
+  if (typeof oldValue === "string" && typeof newValue === "string") {
+    return normalizeString(oldValue) !== normalizeString(newValue);
+  }
+
+  // その他の場合は厳密等価で比較
+  return oldValue !== newValue;
+}
+
+/**
+ * 日付をフォーマット
+ */
+function formatDate(value: any): string {
+  if (!value) return "";
+  if (value instanceof Date) {
+    return value.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+  return String(value);
+}
+
+/**
+ * 価格をフォーマット
+ */
+function formatPrice(value: any): string {
+  if (!value) return "";
+  const num = Number(value);
+  if (isNaN(num)) return String(value);
+  return `¥${num.toLocaleString("ja-JP")}`;
+}
+
+/**
+ * 変更内容をメッセージ形式にフォーマット
+ */
+export function formatChangesMessage(changes: ImportantChange[]): string {
+  if (changes.length === 0) return "";
+
+  let message = "🔄 以下の項目が変更されました:\n\n";
+
+  for (const change of changes) {
+    const oldVal = change.oldValue || "(未設定)";
+    const newVal = change.newValue || "(未設定)";
+    message += `• ${change.fieldLabel}: ${oldVal} → ${newVal}\n`;
+  }
+
+  return message;
+}
