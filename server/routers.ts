@@ -34,6 +34,7 @@ import {
   getAllIssuers,
   getIssuersByIds,
 } from "./db";
+import type { Issuer } from "../drizzle/schema";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
 import { detectNewBiddings } from "./newBiddingDetector.js";
 import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
@@ -588,8 +589,10 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         name: z.string(),
+        issuerIds: z.string().optional(),
         orderOrganCodes: z.string().optional(),
         orderOrganNames: z.string().optional(),
+        projectType: z.string().optional(),
         publicationDateDays: z.number().optional(),
         updateDateDays: z.number().optional(),
         keywords: z.string().optional(),
@@ -599,9 +602,27 @@ export const appRouter = router({
         notificationTimes: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // issuerIdsが指定されている場合、発注機関名に変換
+        let orderOrganNames = input.orderOrganNames;
+        if (input.issuerIds && !orderOrganNames) {
+          const issuerIdArray = input.issuerIds.split(",").map(Number);
+          const issuers = await getAllIssuers();
+          const selectedIssuers = issuers.filter((issuer: Issuer) => issuerIdArray.includes(issuer.id));
+          orderOrganNames = selectedIssuers.map((issuer: Issuer) => issuer.name).join(",");
+        }
+
         const id = await insertNotificationSubscription({
           userId: ctx.user.id,
-          ...input,
+          name: input.name,
+          orderOrganNames,
+          projectType: input.projectType,
+          notificationTimes: input.notificationTimes,
+          publicationDateDays: input.publicationDateDays,
+          updateDateDays: input.updateDateDays,
+          keywords: input.keywords,
+          ratings: input.ratings,
+          estimatedPriceMin: input.estimatedPriceMin,
+          estimatedPriceMax: input.estimatedPriceMax,
         });
         return { success: true, id };
       }),
@@ -611,8 +632,10 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
+        issuerIds: z.string().optional(),
         orderOrganCodes: z.string().optional(),
         orderOrganNames: z.string().optional(),
+        projectType: z.string().optional(),
         publicationDateDays: z.number().optional(),
         updateDateDays: z.number().optional(),
         keywords: z.string().optional(),
@@ -623,7 +646,16 @@ export const appRouter = router({
         enabled: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...updates } = input;
+        const { id, issuerIds, ...updates } = input;
+        
+        // issuerIdsが指定されている場合、発注機関名に変換
+        if (issuerIds && !updates.orderOrganNames) {
+          const issuerIdArray = issuerIds.split(",").map(Number);
+          const issuers = await getAllIssuers();
+          const selectedIssuers = issuers.filter((issuer: Issuer) => issuerIdArray.includes(issuer.id));
+          updates.orderOrganNames = selectedIssuers.map((issuer: Issuer) => issuer.name).join(",");
+        }
+        
         await updateNotificationSubscription(id, updates);
         return { success: true };
       }),

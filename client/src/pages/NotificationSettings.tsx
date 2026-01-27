@@ -88,9 +88,19 @@ export default function NotificationSettings() {
 
   const handleEdit = (subscription: any) => {
     setEditingId(subscription.id);
+    
+    // orderOrganNamesからissuerIdsへの逆変換
+    let issuerIdsArray: number[] = [];
+    if (subscription.orderOrganNames && issuers) {
+      const organNames = subscription.orderOrganNames.split(",").map((n: string) => n.trim());
+      issuerIdsArray = issuers
+        .filter((issuer) => organNames.includes(issuer.name))
+        .map((issuer) => issuer.id);
+    }
+    
     setFormData({
       name: subscription.name,
-      issuerIds: subscription.issuerIds ? subscription.issuerIds.split(",").map(Number) : [],
+      issuerIds: issuerIdsArray,
       projectType: subscription.projectType || "",
       notificationTimes: subscription.notificationTimes || "08:00",
     });
