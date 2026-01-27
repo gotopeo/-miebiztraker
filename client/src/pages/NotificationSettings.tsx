@@ -237,31 +237,13 @@ export default function NotificationSettings() {
                     <SelectTrigger>
                       <SelectValue placeholder="時刻を選択" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="00:00">00:00</SelectItem>
-                      <SelectItem value="01:00">01:00</SelectItem>
-                      <SelectItem value="02:00">02:00</SelectItem>
-                      <SelectItem value="03:00">03:00</SelectItem>
-                      <SelectItem value="04:00">04:00</SelectItem>
-                      <SelectItem value="05:00">05:00</SelectItem>
-                      <SelectItem value="06:00">06:00</SelectItem>
-                      <SelectItem value="07:00">07:00</SelectItem>
-                      <SelectItem value="08:00">08:00</SelectItem>
-                      <SelectItem value="09:00">09:00</SelectItem>
-                      <SelectItem value="10:00">10:00</SelectItem>
-                      <SelectItem value="11:00">11:00</SelectItem>
-                      <SelectItem value="12:00">12:00</SelectItem>
-                      <SelectItem value="13:00">13:00</SelectItem>
-                      <SelectItem value="14:00">14:00</SelectItem>
-                      <SelectItem value="15:00">15:00</SelectItem>
-                      <SelectItem value="16:00">16:00</SelectItem>
-                      <SelectItem value="17:00">17:00</SelectItem>
-                      <SelectItem value="18:00">18:00</SelectItem>
-                      <SelectItem value="19:00">19:00</SelectItem>
-                      <SelectItem value="20:00">20:00</SelectItem>
-                      <SelectItem value="21:00">21:00</SelectItem>
-                      <SelectItem value="22:00">22:00</SelectItem>
-                      <SelectItem value="23:00">23:00</SelectItem>
+                    <SelectContent className="max-h-[300px]">
+                      {Array.from({ length: 144 }, (_, i) => {
+                        const hour = Math.floor(i / 6);
+                        const minute = (i % 6) * 10;
+                        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        return <SelectItem key={timeStr} value={timeStr}>{timeStr}</SelectItem>;
+                      })}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
