@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginUrl } from "@/const";
-import { Database, Search, Bell, Calendar, FileSpreadsheet, Activity } from "lucide-react";
+import { Database, Search, Bell, Calendar, FileSpreadsheet, Activity, MessageSquare, Link2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -127,15 +127,29 @@ export default function Home() {
             </Card>
           </Link>
 
-          <Link href="/keywords">
+          <Link href="/notifications">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <Bell className="h-10 w-10 text-primary mb-2" />
-                <CardTitle>キーワード監視</CardTitle>
+                <CardTitle>通知設定</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  監視するキーワードを設定し、新規案件を通知します
+                  条件に一致する新着入札情報をLINEで受け取る設定を管理します
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/line-connection">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <MessageSquare className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>LINE連携</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  LINEアカウントと連携して、通知をLINEで受け取ることができます
                 </CardDescription>
               </CardContent>
             </Card>
