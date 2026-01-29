@@ -64,6 +64,13 @@
       "when": 1769518236764,
       "tag": "0008_robust_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1769652484957,
+      "tag": "0009_thin_devos",
+      "breakpoints": true
     }
   ]
 }

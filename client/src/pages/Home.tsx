@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import { getLoginUrl } from "@/const";
 import { Database, Search, Bell, Calendar, FileSpreadsheet, Activity, MessageSquare, Link2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(!user?.isOnboarded);
 
   if (loading) {
     return (
@@ -78,7 +81,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <OnboardingModal 
+        isOpen={showOnboarding} 
+        onClose={() => setShowOnboarding(false)} 
+      />
+      <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-foreground">三重県入札情報取得システム</h1>
@@ -195,5 +203,6 @@ export default function Home() {
         </div>
       </main>
     </div>
+    </>
   );
 }

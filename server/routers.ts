@@ -35,6 +35,9 @@ import {
   getIssuersByIds,
 } from "./db";
 import type { Issuer } from "../drizzle/schema";
+import { getDb } from "./db";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 import { scrapeMieBiddings, convertToInsertBidding, SearchConditions } from "./scraper";
 import { detectNewBiddings } from "./newBiddingDetector.js";
 import { updateSchedule, removeSchedule, getActiveScheduleInfo } from "./scheduler";
@@ -51,6 +54,12 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+    completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.update(users).set({ isOnboarded: true }).where(eq(users.id, ctx.user.id));
+      return { success: true };
     }),
   }),
 
