@@ -64,10 +64,9 @@ async function processSubscription(subscription: any): Promise<void> {
   // 時間窓の設定
   const since = subscription.lastNotifiedAt || new Date(Date.now() - 24 * 60 * 60 * 1000); // 初回は過去24時間
   const until = new Date();
-  const isFirstNotification = !subscription.isFirstNotificationSent;
+  // isFirstNotificationSentは使用しない（lastNotifiedAtで制御）
 
   console.log(`[Notification Job] Time window: ${since.toISOString()} to ${until.toISOString()}`);
-  console.log(`[Notification Job] Is first notification: ${isFirstNotification}`);
 
   // 新規候補を取得：firstSeenAt > since AND firstSeenAt <= until
   const newCandidates = await db
@@ -108,19 +107,8 @@ async function processSubscription(subscription: any): Promise<void> {
 
   console.log(`[Notification Job] After filtering: ${filteredNew.length} new, ${filteredUpdate.length} updates`);
 
-  // 初回通知抑制
+  // 初回通知抑制ロジックを削除（設定作成時にlastNotifiedAtを設定するため、古い案件が通知されることはない）
   let finalNew = filteredNew;
-  if (isFirstNotification && filteredNew.length > 0) {
-    // max(firstSeenAt, updatedAt) desc でソート
-    const sorted = [...filteredNew].sort((a, b) => {
-      const aDate = a.updatedAt || a.firstSeenAt;
-      const bDate = b.updatedAt || b.firstSeenAt;
-      if (!aDate || !bDate) return 0;
-      return bDate.getTime() - aDate.getTime();
-    });
-    finalNew = sorted.slice(0, 10);
-    console.log(`[Notification Job] First notification: limited to ${finalNew.length} items`);
-  }
 
   // 重複チェック
   const finalNewAfterDuplicateCheck = await removeDuplicates(finalNew, subscription.userId, subscription.id, "NEW", db);
@@ -140,7 +128,6 @@ async function processSubscription(subscription: any): Promise<void> {
   // last_notified_atを更新
   await updateNotificationSubscription(subscription.id, {
     lastNotifiedAt: until,
-    isFirstNotificationSent: true,
   });
 
   console.log(`[Notification Job] Subscription ${subscription.id} processed successfully`);

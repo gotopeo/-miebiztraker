@@ -632,6 +632,7 @@ export const appRouter = router({
           ratings: input.ratings,
           estimatedPriceMin: input.estimatedPriceMin,
           estimatedPriceMax: input.estimatedPriceMax,
+          lastNotifiedAt: new Date(), // 設定作成時点を基準とし、それ以降の案件のみ通知
         });
         return { success: true, id };
       }),
@@ -653,6 +654,7 @@ export const appRouter = router({
         estimatedPriceMax: z.string().optional(),
         notificationTimes: z.string().optional(),
         enabled: z.boolean().optional(),
+        lastNotifiedAt: z.date().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, issuerIds, ...updates } = input;
@@ -663,6 +665,11 @@ export const appRouter = router({
           const issuers = await getAllIssuers();
           const selectedIssuers = issuers.filter((issuer: Issuer) => issuerIdArray.includes(issuer.id));
           updates.orderOrganNames = selectedIssuers.map((issuer: Issuer) => issuer.name).join(",");
+        }
+        
+        // フィルター条件（発注機関、工事種別）が変更された場合、lastNotifiedAtを更新
+        if (updates.orderOrganNames !== undefined || updates.projectType !== undefined) {
+          updates.lastNotifiedAt = new Date(); // フィルター変更時点を基準とし、それ以降の案件のみ通知
         }
         
         await updateNotificationSubscription(id, updates);
