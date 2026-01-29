@@ -20,18 +20,19 @@ import { Loader2, Plus, Pencil, Trash2, Bell, BellOff, AlertCircle, Send } from 
 import { MultiSelect } from "@/components/ui/multi-select";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { CONSTRUCTION_TYPES } from "../../../shared/constructionTypes";
 
 interface NotificationFormData {
   name: string;
   issuerIds: number[];
-  projectType: string;
+  projectTypes: string[]; // 複数選択に変更
   notificationTimes: string;
 }
 
 const initialFormData: NotificationFormData = {
   name: "",
   issuerIds: [],
-  projectType: "",
+  projectTypes: [], // 複数選択に変更
   notificationTimes: "08:00",
 };
 
@@ -64,7 +65,7 @@ export default function NotificationSettings() {
       const payload = {
         name: formData.name,
         issuerIds: formData.issuerIds.length > 0 ? formData.issuerIds.join(",") : undefined,
-        projectType: formData.projectType || undefined,
+        projectType: formData.projectTypes.length > 0 ? formData.projectTypes.join(",") : undefined,
         notificationTimes: formData.notificationTimes,
       };
 
@@ -98,10 +99,14 @@ export default function NotificationSettings() {
         .map((issuer) => issuer.id);
     }
     
+    const projectTypesArray = subscription.projectType 
+      ? subscription.projectType.split(",").map((t: string) => t.trim()).filter((t: string) => t.length > 0)
+      : [];
+    
     setFormData({
       name: subscription.name,
       issuerIds: issuerIdsArray,
-      projectType: subscription.projectType || "",
+      projectTypes: projectTypesArray,
       notificationTimes: subscription.notificationTimes || "08:00",
     });
     setIsDialogOpen(true);
@@ -215,15 +220,15 @@ export default function NotificationSettings() {
 
                 {/* 工種/委託種別 */}
                 <div className="space-y-2">
-                  <Label htmlFor="projectType">工種/委託種別</Label>
-                  <Input
-                    id="projectType"
-                    value={formData.projectType}
-                    onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                    placeholder="例: 土木一式、建築一式"
+                  <Label htmlFor="projectTypes">工種/委託種別</Label>
+                  <MultiSelect
+                    options={CONSTRUCTION_TYPES.map((type: string) => ({ label: type, value: type }))}
+                    selected={formData.projectTypes}
+                    onChange={(values) => setFormData({ ...formData, projectTypes: values })}
+                    placeholder="工種/委託種別を選択"
                   />
                   <p className="text-xs text-muted-foreground">
-                    部分一致で検索されます（空欄の場合は全ての種別が対象）
+                    複数選択可能です（未選択の場合は全ての種別が対象）
                   </p>
                 </div>
 

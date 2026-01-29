@@ -158,10 +158,11 @@ async function applyFilters(candidates: Bidding[], subscription: any): Promise<B
     filtered = filtered.filter(b => b.orderOrganName && names.includes(b.orderOrganName));
   }
 
-  // 工事種別フィルター（OR部分一致）
-  if (subscription.keywords) {
-    const keywords = subscription.keywords.split(",").map((k: string) => k.trim());
-    filtered = filtered.filter(b => matchesKeywords(b.constructionType || "", keywords));
+  // 工事種別フィルター（projectTypeまたはkeywordsを使用、OR部分一致）
+  const projectTypeFilter = subscription.projectType || subscription.keywords;
+  if (projectTypeFilter) {
+    const types = projectTypeFilter.split(",").map((k: string) => k.trim());
+    filtered = filtered.filter(b => matchesKeywords(b.constructionType || "", types));
   }
 
   return filtered;
