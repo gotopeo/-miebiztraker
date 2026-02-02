@@ -81,7 +81,11 @@ async function handleWebhookEvent(event: WebhookEvent) {
       await sendLineTextMessage(
         lineUserId,
         "MieBid Trackerへようこそ！\n\n" +
-        "アカウント連携を行うには、Webサイトの設定画面で表示される6桁の認証コードをこのトークに送信してください。"
+        "【LINE連携の手順】\n" +
+        "1. Webサイトにログインしてください\n" +
+        "2. 「LINE連携」ページで連携ボタンをタップ\n" +
+        "3. 自動的に連携が完了します\n\n" +
+        "※ まだWebサイトにログインしていない場合は、先にログインしてください。"
       );
     }
     

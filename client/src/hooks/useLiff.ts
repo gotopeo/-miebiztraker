@@ -89,6 +89,15 @@ export function useLiff(options: UseLiffOptions = {}): UseLiffReturn {
         throw new Error("LINE User ID not found");
       }
 
+      // 既に認証済みかチェック（無限リロード防止）
+      const authKey = `liff_auth_${targetUserId}`;
+      const isAlreadyAuthenticated = sessionStorage.getItem(authKey);
+      
+      if (isAlreadyAuthenticated) {
+        console.log("[LIFF] Already authenticated, skipping reload");
+        return;
+      }
+
       const result = await authenticateMutation.mutateAsync({
         lineUserId: targetUserId,
       });
@@ -97,6 +106,9 @@ export function useLiff(options: UseLiffOptions = {}): UseLiffReturn {
         throw new Error(result.message || "認証に失敗しました");
       }
 
+      // 認証成功をマーク
+      sessionStorage.setItem(authKey, "true");
+      
       // 認証成功後、ページをリロードしてセッションを反映
       window.location.reload();
     } catch (err) {

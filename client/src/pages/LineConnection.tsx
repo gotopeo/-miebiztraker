@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { ENV } from "@/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -109,15 +110,54 @@ export default function LineConnection() {
                   LINE連携を行うと、設定した条件に一致する新着入札情報をLINEで受け取ることができます。
                 </AlertDescription>
               </Alert>
-              <Button
-                onClick={handleGenerateCode}
-                disabled={generateCodeMutation.isPending || !!verificationCode}
-              >
-                {generateCodeMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                認証コードを発行
-              </Button>
+              
+              {/* LIFF連携（推奨） */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">方法1: ワンタップで連携（推奨）</h3>
+                <p className="text-xs text-muted-foreground">
+                  下のボタンをタップするだけで、自動的にLINE連携が完了します。
+                </p>
+                <Button asChild className="w-full" size="lg">
+                  <a
+                    href={`https://liff.line.me/${ENV.liffId || '2009029347-SE3MfVUQ'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    LINEで連携する
+                  </a>
+                </Button>
+              </div>
+
+              {/* 区切り線 */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    または
+                  </span>
+                </div>
+              </div>
+
+              {/* ワンタイムコード方式 */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">方法2: 認証コードで連携</h3>
+                <p className="text-xs text-muted-foreground">
+                  6桁の認証コードを発行し、LINEトークに送信して連携します。
+                </p>
+                <Button
+                  onClick={handleGenerateCode}
+                  disabled={generateCodeMutation.isPending || !!verificationCode}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {generateCodeMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  認証コードを発行
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
