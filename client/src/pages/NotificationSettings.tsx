@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { useLiff } from "@/hooks/useLiff";
+import { ENV } from "@/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,12 @@ const initialFormData: NotificationFormData = {
 };
 
 export default function NotificationSettings() {
+  // LIFF認証フック（LIFF IDが設定されている場合のみ有効）
+  const { isLoading: isLiffLoading, error: liffError } = useLiff({
+    liffId: ENV.liffId,
+    autoLogin: true,
+  });
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<NotificationFormData>(initialFormData);
@@ -166,6 +174,16 @@ export default function NotificationSettings() {
 
   return (
     <div className="container py-8 max-w-6xl">
+      {/* LIFF認証エラー表示 */}
+      {liffError && (
+        <Alert className="mb-4" variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            LIFF認証エラー: {liffError}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">通知設定</h1>
