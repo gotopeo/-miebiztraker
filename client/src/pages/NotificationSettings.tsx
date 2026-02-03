@@ -155,6 +155,11 @@ export default function NotificationSettings() {
   };
 
   const handleNewNotification = () => {
+    // 通知設定の上限チェック（3件まで）
+    if (subscriptions && subscriptions.length >= 3) {
+      toast.error("通知設定は最大3件までしか作成できません。新しい設定を作成するには、既存の設定を削除してください。");
+      return;
+    }
     setEditingId(null);
     setFormData(initialFormData);
     setIsDialogOpen(true);
@@ -224,13 +229,23 @@ export default function NotificationSettings() {
 
                 {/* 発注機関選択 */}
                 <div className="space-y-2">
-                  <Label>発注機関</Label>
-                  <MultiSelect
-                    options={issuerOptions}
-                    selected={formData.issuerIds.map(String)}
-                    onChange={(selected) => setFormData({ ...formData, issuerIds: selected.map(Number) })}
-                    placeholder="発注機関を選択"
-                  />
+                  <Label htmlFor="issuerIds">発注機関</Label>
+                  <Select
+                    value={formData.issuerIds.length > 0 ? formData.issuerIds[0].toString() : ""}
+                    onValueChange={(value) => setFormData({ ...formData, issuerIds: value ? [Number(value)] : [] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="発注機関を選択" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="">全ての発注機関</SelectItem>
+                      {issuerOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
                     未選択の場合は全ての発注機関が対象になります
                   </p>
@@ -239,14 +254,24 @@ export default function NotificationSettings() {
                 {/* 工種/委託種別 */}
                 <div className="space-y-2">
                   <Label htmlFor="projectTypes">工種/委託種別</Label>
-                  <MultiSelect
-                    options={CONSTRUCTION_TYPES.map((type: string) => ({ label: type, value: type }))}
-                    selected={formData.projectTypes}
-                    onChange={(values) => setFormData({ ...formData, projectTypes: values })}
-                    placeholder="工種/委託種別を選択"
-                  />
+                  <Select
+                    value={formData.projectTypes.length > 0 ? formData.projectTypes[0] : ""}
+                    onValueChange={(value) => setFormData({ ...formData, projectTypes: value ? [value] : [] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="工種/委託種別を選択" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="">全ての種別</SelectItem>
+                      {CONSTRUCTION_TYPES.map((type: string) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    複数選択可能です（未選択の場合は全ての種別が対象）
+                    未選択の場合は全ての種別が対象になります
                   </p>
                 </div>
 

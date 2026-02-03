@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { liffRouter } from "./routers/liff";
 import { liffAuthRouter } from "./routers/liffAuth";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   searchBiddings,
@@ -615,6 +616,15 @@ export const appRouter = router({
         notificationTimes: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // 通知設定の上限チェック（3件まで）
+        const existingSubscriptions = await getNotificationSubscriptions(ctx.user.id);
+        if (existingSubscriptions.length >= 3) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: '通知設定は最大3件までしか作成できません。新しい設定を作成するには、既存の設定を削除してください。',
+          });
+        }
+
         // issuerIdsが指定されている場合、発注機関名に変換
         let orderOrganNames = input.orderOrganNames;
         if (input.issuerIds && !orderOrganNames) {
