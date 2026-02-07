@@ -119,6 +119,54 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/**
+ * 全ユーザー一覧を取得（管理者用）
+ */
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+/**
+ * ユーザーIDでユーザーを取得
+ */
+export async function getUserById(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * システム統計情報を取得（管理者用）
+ */
+export async function getSystemStats() {
+  const db = await getDb();
+  if (!db) return {
+    totalUsers: 0,
+    lineConnectedUsers: 0,
+    totalNotificationSettings: 0,
+    totalBiddings: 0,
+  };
+
+  const [usersCount, lineConnectionsCount, notificationSettingsCount, biddingsCount] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(users),
+    db.select({ count: sql<number>`count(*)` }).from(lineConnections),
+    db.select({ count: sql<number>`count(*)` }).from(notificationSubscriptions),
+    db.select({ count: sql<number>`count(*)` }).from(biddings),
+  ]);
+
+  return {
+    totalUsers: Number(usersCount[0]?.count || 0),
+    lineConnectedUsers: Number(lineConnectionsCount[0]?.count || 0),
+    totalNotificationSettings: Number(notificationSettingsCount[0]?.count || 0),
+    totalBiddings: Number(biddingsCount[0]?.count || 0),
+  };
+}
+
 // ===== 入札情報関連 =====
 
 /**

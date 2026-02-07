@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { getLoginUrl } from "@/const";
-import { Database, Search, Bell, Calendar, FileSpreadsheet, Activity, MessageSquare, Link2 } from "lucide-react";
+import { Database, Search, Bell, Calendar, FileSpreadsheet, Activity, MessageSquare, Link2, Users } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -200,6 +200,22 @@ export default function Home() {
               </CardDescription>
             </CardContent>
           </Card>
+
+          {user?.role === 'admin' && (
+            <Link href="/admin/dashboard">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary">
+                <CardHeader>
+                  <Users className="h-10 w-10 text-primary mb-2" />
+                  <CardTitle>管理者ダッシュボード</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    全ユーザーの情報・通知設定・LINE連携状態を管理できます
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
       </main>
     </div>

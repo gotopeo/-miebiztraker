@@ -14,6 +14,8 @@ import KeywordSettings from "./pages/KeywordSettings";
 import ScheduleSettings from "./pages/ScheduleSettings";
 import LineConnection from "./pages/LineConnection";
 import NotificationSettings from "./pages/NotificationSettings";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserDetail from "./pages/UserDetail";
 
 function Router() {
   return (
@@ -21,6 +23,8 @@ function Router() {
       <Route path={"/"} component={Landing} />
       <Route path={"/liff-success"} component={LiffSuccess} />
       <Route path={"/admin/login"} component={AdminLogin} />
+      <Route path={"/admin/users/:userId"} component={UserDetail} />
+      <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin"} component={Home} />
       <Route path={"/biddings"} component={BiddingList} />
       <Route path={"/scraping"} component={ScrapingLogs} />

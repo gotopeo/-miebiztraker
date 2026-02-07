@@ -36,6 +36,9 @@ import {
   getNotificationLogs,
   getAllIssuers,
   getIssuersByIds,
+  getAllUsers,
+  getUserById,
+  getSystemStats,
 } from "./db";
 import type { Issuer } from "../drizzle/schema";
 import { getDb } from "./db";
@@ -748,6 +751,89 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await getIssuersByIds(input.ids);
       }),
+  }),
+
+  // 管理者専用API
+  admin: router({
+    // システム統計情報を取得
+    stats: protectedProcedure
+      .query(async ({ ctx }) => {
+        // 管理者権限チェック
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: '管理者権限が必要です',
+          });
+        }
+        return await getSystemStats();
+      }),
+
+    // 全ユーザー一覧を取得
+    users: router({
+      list: protectedProcedure
+        .query(async ({ ctx }) => {
+          // 管理者権限チェック
+          if (ctx.user.role !== 'admin') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: '管理者権限が必要です',
+            });
+          }
+
+          const allUsers = await getAllUsers();
+          
+          // 各ユーザーのLINE連携状態と通知設定数を取得
+          const usersWithDetails = await Promise.all(
+            allUsers.map(async (user) => {
+              const lineConnection = await getLineConnectionByUserId(user.id);
+              const notificationSettings = await getNotificationSubscriptions(user.id);
+              
+              return {
+                ...user,
+                lineConnected: !!lineConnection,
+                lineDisplayName: lineConnection?.lineDisplayName,
+                notificationCount: notificationSettings.length,
+              };
+            })
+          );
+
+          return usersWithDetails;
+        }),
+
+      // ユーザー詳細情報を取得
+      detail: protectedProcedure
+        .input(z.object({ userId: z.number() }))
+        .query(async ({ ctx, input }) => {
+          // 管理者権限チェック
+          if (ctx.user.role !== 'admin') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: '管理者権限が必要です',
+            });
+          }
+
+          const user = await getUserById(input.userId);
+          if (!user) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'ユーザーが見つかりません',
+            });
+          }
+
+          const [lineConnection, notificationSettings, notificationLogs] = await Promise.all([
+            getLineConnectionByUserId(input.userId),
+            getNotificationSubscriptions(input.userId),
+            getNotificationLogs(input.userId, 50),
+          ]);
+
+          return {
+            user,
+            lineConnection,
+            notificationSettings,
+            notificationLogs,
+          };
+        }),
+    }),
   }),
 });
 
