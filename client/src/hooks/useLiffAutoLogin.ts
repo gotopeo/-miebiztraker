@@ -7,6 +7,7 @@ export function useLiffAutoLogin() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   const loginMutation = trpc.liffAuth.loginOrRegister.useMutation();
 
@@ -39,6 +40,7 @@ export function useLiffAutoLogin() {
           // セッショントークンをクッキーに保存
           document.cookie = `session=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
           
+          setIsNewUser(result.isNewUser || false);
           setIsLoggedIn(true);
           setIsLoading(false);
         }
@@ -56,5 +58,6 @@ export function useLiffAutoLogin() {
     isLoading,
     error,
     isLoggedIn,
+    isNewUser,
   };
 }

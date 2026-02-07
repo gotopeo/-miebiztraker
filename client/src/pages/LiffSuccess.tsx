@@ -6,18 +6,25 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 export default function LiffSuccess() {
-  const { isLoading, error, isLoggedIn } = useLiffAutoLogin();
+  const { isLoading, error, isLoggedIn, isNewUser } = useLiffAutoLogin();
   const [, setLocation] = useLocation();
 
-  // 連携完了後、3秒待ってから通知設定画面にリダイレクト
+  // 既存ユーザー（LINE連携済み）の場合は即座にリダイレクト
+  // 新規ユーザーの場合は3秒待ってからリダイレクト
   useEffect(() => {
     if (isLoggedIn) {
-      const timer = setTimeout(() => {
+      if (isNewUser) {
+        // 新規ユーザー：成功メッセージを表示してからリダイレクト
+        const timer = setTimeout(() => {
+          setLocation("/notifications");
+        }, 3000);
+        return () => clearTimeout(timer);
+      } else {
+        // 既存ユーザー：即座にリダイレクト
         setLocation("/notifications");
-      }, 3000);
-      return () => clearTimeout(timer);
+      }
     }
-  }, [isLoggedIn, setLocation]);
+  }, [isLoggedIn, isNewUser, setLocation]);
 
   if (isLoading) {
     return (
@@ -56,7 +63,8 @@ export default function LiffSuccess() {
     );
   }
 
-  if (isLoggedIn) {
+  // 新規ユーザーのみ成功画面を表示（既存ユーザーは即座にリダイレクトされる）
+  if (isLoggedIn && isNewUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
         <Card className="w-full max-w-md border-green-200">
