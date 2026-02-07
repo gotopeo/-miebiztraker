@@ -2,9 +2,22 @@ import { useLiffAutoLogin } from "@/hooks/useLiffAutoLogin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function LiffSuccess() {
   const { isLoading, error, isLoggedIn } = useLiffAutoLogin();
+  const [, setLocation] = useLocation();
+
+  // 連携完了後、3秒待ってから通知設定画面にリダイレクト
+  useEffect(() => {
+    if (isLoggedIn) {
+      const timer = setTimeout(() => {
+        setLocation("/notifications");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, setLocation]);
 
   if (isLoading) {
     return (
@@ -57,40 +70,18 @@ export default function LiffSuccess() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <h3 className="font-semibold">次のステップ</h3>
-              <ol className="space-y-2 text-sm text-gray-600">
-                <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                    1
-                  </span>
-                  <span>
-                    LINEのトーク画面を開いてください
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                    2
-                  </span>
-                  <span>
-                    リッチメニューから「通知設定」をタップ
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                    3
-                  </span>
-                  <span>
-                    受け取りたい案件の条件を設定してください
-                  </span>
-                </li>
-              </ol>
+            <div className="text-center space-y-4">
+              <p className="text-lg">まもなく通知設定画面に移動します...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
             </div>
             
             <div className="pt-4 border-t">
-              <p className="text-xs text-gray-500 text-center">
-                このページは閉じても問題ありません
-              </p>
+              <Button 
+                onClick={() => setLocation("/notifications")} 
+                className="w-full"
+              >
+                今すぐ通知設定画面へ
+              </Button>
             </div>
           </CardContent>
         </Card>
