@@ -59,13 +59,9 @@ export default function LiffSuccess() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <p className="font-semibold text-gray-900">次のステップ</p>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                <li>LINEのトーク画面を開いてください</li>
-                <li>リッチメニューから「通知設定」をタップ</li>
-                <li>受け取りたい案件の条件を設定してください</li>
-              </ol>
+            <div className="space-y-3 text-center">
+              <p className="text-gray-700">これで、条件に合った新着入札情報がLINEで届くようになります。</p>
+              <p className="text-gray-700 font-semibold">まずは通知設定を行いましょう。</p>
             </div>
             
             <div className="pt-4 border-t">
