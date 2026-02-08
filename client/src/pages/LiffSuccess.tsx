@@ -2,29 +2,11 @@ import { useLiffAutoLogin } from "@/hooks/useLiffAutoLogin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
-import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 export default function LiffSuccess() {
-  const { isLoading, error, isLoggedIn, isNewUser } = useLiffAutoLogin();
+  const { isLoading, error, isLoggedIn } = useLiffAutoLogin();
   const [, setLocation] = useLocation();
-
-  // 既存ユーザー（LINE連携済み）の場合は即座にリダイレクト
-  // 新規ユーザーの場合は3秒待ってからリダイレクト
-  useEffect(() => {
-    if (isLoggedIn) {
-      if (isNewUser) {
-        // 新規ユーザー：成功メッセージを表示してからリダイレクト
-        const timer = setTimeout(() => {
-          setLocation("/notifications");
-        }, 3000);
-        return () => clearTimeout(timer);
-      } else {
-        // 既存ユーザー：即座にリダイレクト
-        setLocation("/notifications");
-      }
-    }
-  }, [isLoggedIn, isNewUser, setLocation]);
 
   if (isLoading) {
     return (
@@ -63,8 +45,7 @@ export default function LiffSuccess() {
     );
   }
 
-  // 新規ユーザーのみ成功画面を表示（既存ユーザーは即座にリダイレクトされる）
-  if (isLoggedIn && isNewUser) {
+  if (isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
         <Card className="w-full max-w-md border-green-200">
@@ -78,17 +59,22 @@ export default function LiffSuccess() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="text-center space-y-4">
-              <p className="text-lg">まもなく通知設定画面に移動します...</p>
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+            <div className="space-y-3">
+              <p className="font-semibold text-gray-900">次のステップ</p>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                <li>LINEのトーク画面を開いてください</li>
+                <li>リッチメニューから「通知設定」をタップ</li>
+                <li>受け取りたい案件の条件を設定してください</li>
+              </ol>
             </div>
             
             <div className="pt-4 border-t">
               <Button 
                 onClick={() => setLocation("/notifications")} 
                 className="w-full"
+                size="lg"
               >
-                今すぐ通知設定画面へ
+                通知設定へ
               </Button>
             </div>
           </CardContent>
