@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { authenticateWithLiff } from "../liffAuth";
+import { authenticateWithLiff } from "../liffAuth.js";
 import { COOKIE_NAME } from "../../shared/const";
 
 export const liffRouter = router({
