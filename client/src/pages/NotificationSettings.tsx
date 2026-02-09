@@ -193,12 +193,12 @@ export default function NotificationSettings() {
         <div>
           <h1 className="text-3xl font-bold mb-2">通知設定</h1>
           <p className="text-muted-foreground">
-            条件に一致する新着入札情報をLINEで受け取る設定を管理します
+            条件に一致する新着入札情報をLINEで受け取る設定を管理します（最大3件まで）
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleNewNotification} disabled={!isLineConnected}>
+            <Button onClick={handleNewNotification} disabled={!isLineConnected || (subscriptions && subscriptions.length >= 3)}>
               <Plus className="mr-2 h-4 w-4" />
               新規作成
             </Button>
@@ -238,7 +238,7 @@ export default function NotificationSettings() {
                       <SelectValue placeholder="発注機関を選択" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
-                      <SelectItem value="">全ての発注機関</SelectItem>
+                      <SelectItem value="all">全ての発注機関</SelectItem>
                       {issuerOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
@@ -255,14 +255,14 @@ export default function NotificationSettings() {
                 <div className="space-y-2">
                   <Label htmlFor="projectTypes">工種/委託種別</Label>
                   <Select
-                    value={formData.projectTypes.length > 0 ? formData.projectTypes[0] : ""}
-                    onValueChange={(value) => setFormData({ ...formData, projectTypes: value ? [value] : [] })}
+                    value={formData.projectTypes.length > 0 ? formData.projectTypes[0] : "all"}
+                    onValueChange={(value) => setFormData({ ...formData, projectTypes: value === "all" ? [] : [value] })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="工種/委託種別を選択" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
-                      <SelectItem value="">全ての種別</SelectItem>
+                      <SelectItem value="all">全ての種別</SelectItem>
                       {CONSTRUCTION_TYPES.map((type: string) => (
                         <SelectItem key={type} value={type}>
                           {type}
