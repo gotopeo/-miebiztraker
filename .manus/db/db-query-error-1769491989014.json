@@ -1,8 +1,0 @@
-{
-  "query": "-- 通知履歴をクリア（テストデータ）\nDELETE FROM notificationLogs;\n\n-- biddingsテーブルのUNIQUE制約を追加\nALTER TABLE `biddings` ADD UNIQUE INDEX `biddings_tenderCanonicalId_unique` (`tenderCanonicalId`);\n\n-- notificationLogsテーブルのユニークインデックスを作成\nCREATE UNIQUE INDEX `unique_notification_idx` ON `notificationLogs` (`userId`, `subscriptionId`, `tenderCanonicalId`, `notificationType`);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute -- 通知履歴をクリア（テストデータ）\nDELETE FROM notificationLogs;\n\n-- biddingsテーブルのUNIQUE制約を追加\nALTER TABLE `biddings` ADD UNIQUE INDEX `biddings_tenderCanonicalId_unique` (`tenderCanonicalId`);\n\n-- notificationLogsテーブルのユニークインデックスを作成\nCREATE UNIQUE INDEX `unique_notification_idx` ON `notificationLogs` (`userId`, `subscriptionId`, `tenderCanonicalId`, `notificationType`);",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1061 (42000) at line 5: index already exist biddings_tenderCanonicalId_unique"
-  ]
-}

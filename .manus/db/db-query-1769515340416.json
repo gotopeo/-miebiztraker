@@ -1,9 +1,0 @@
-{
-  "query": "ALTER TABLE `notificationLogs` DROP INDEX `unique_notification_idx`;\nALTER TABLE `biddings` MODIFY COLUMN `updatedAt` timestamp;\nALTER TABLE `biddings` ADD `version` int DEFAULT 0 NOT NULL;\nALTER TABLE `notificationLogs` ADD `tenderVersion` int;\nALTER TABLE `notificationLogs` ADD CONSTRAINT `unique_new_notification_idx` UNIQUE(`userId`,`subscriptionId`,`tenderCanonicalId`,`notificationType`);\nALTER TABLE `notificationLogs` ADD CONSTRAINT `unique_update_notification_idx` UNIQUE(`userId`,`subscriptionId`,`tenderCanonicalId`,`notificationType`,`tenderVersion`);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute ALTER TABLE `notificationLogs` DROP INDEX `unique_notification_idx`;\nALTER TABLE `biddings` MODIFY COLUMN `updatedAt` timestamp;\nALTER TABLE `biddings` ADD `version` int DEFAULT 0 NOT NULL;\nALTER TABLE `notificationLogs` ADD `tenderVersion` int;\nALTER TABLE `notificationLogs` ADD CONSTRAINT `unique_new_notification_idx` UNIQUE(`userId`,`subscriptionId`,`tenderCanonicalId`,`notificationType`);\nALTER TABLE `notificationLogs` ADD CONSTRAINT `unique_update_notification_idx` UNIQUE(`userId`,`subscriptionId`,`tenderCanonicalId`,`notificationType`,`tenderVersion`);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 4873
-}

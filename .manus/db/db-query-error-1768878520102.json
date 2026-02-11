@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, name, executionTime, nextExecutionAt, lastExecutedAt FROM schedule_settings ORDER BY id;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, name, executionTime, nextExecutionAt, lastExecutedAt FROM schedule_settings ORDER BY id;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 1: Table 'ny6jpb2ph8byuzfwqjpfhf.schedule_settings' doesn't exist"
-  ]
-}

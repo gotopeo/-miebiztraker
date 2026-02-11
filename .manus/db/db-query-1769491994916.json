@@ -1,9 +1,0 @@
-{
-  "query": "-- notificationLogsテーブルのユニークインデックスを作成\nCREATE UNIQUE INDEX `unique_notification_idx` ON `notificationLogs` (`userId`, `subscriptionId`, `tenderCanonicalId`, `notificationType`);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute -- notificationLogsテーブルのユニークインデックスを作成\nCREATE UNIQUE INDEX `unique_notification_idx` ON `notificationLogs` (`userId`, `subscriptionId`, `tenderCanonicalId`, `notificationType`);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1955
-}
