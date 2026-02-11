@@ -801,3 +801,47 @@
 - [x] 3件以上登録しようとした際にエラーメッセージを表示（フロントエンドとバックエンド両方）
 - [x] バックエンドAPIに3件上限のバリデーションを確認（既に実装済み）
 - [x] 動作確認とチェックポイント保存
+
+---
+
+## スクレイピング問題の解決 - Puppeteerへの移行
+
+### 問題
+- Selenium WebDriverのChromeDriverパス問題が解決しない
+- コードを修正しても古いコードが実行され続ける
+
+### 新しいアプローチ
+- Selenium WebDriverからPuppeteerに移行
+- Puppeteerは内蔵Chromiumを使用するため、ChromeDriverの設定不要
+- よりシンプルで安定した実装
+
+### 実装内容
+- [ ] Puppeteerパッケージをインストール
+- [ ] scraper.tsをPuppeteer版に書き換え
+- [ ] 手動スクレイピングで動作確認
+- [ ] スケジュールスクレイピングで動作確認
+- [ ] チェックポイント保存
+
+---
+
+## スクレイピング機能のPuppeteer移行
+
+### フェーズ1: 問題の特定
+- [x] ChromeDriverエラーの原因を特定（spawn /usr/local/bin/chromedriver-128 ENOENT）
+- [x] 複数の解決策を試みるも失敗（ChromeDriverパス修正、パッケージ再インストール、サーバー再起動など）
+- [x] 根本的な解決策としてPuppeteerへの移行を決定
+
+### フェーズ2: Puppeteerへの移行実装
+- [x] Puppeteerパッケージのインストール
+- [x] server/scraper.tsを完全にPuppeteerベースに書き換え
+- [x] Selenium WebDriver依存関係の削除（selenium-webdriver, chromedriver）
+- [x] convertToInsertBidding関数とscrapeMieBiddings関数の追加（後方互換性）
+
+### フェーズ3: テストと動作確認
+- [x] ローカルテストスクリプトでスクレイピング成功（10件取得）
+- [ ] 管理画面からの手動スクレイピングテスト
+- [ ] スケジュール実行のテスト
+
+### フェーズ4: チェックポイント保存とデプロイ
+- [ ] チェックポイントを作成
+- [ ] ユーザーに移行完了を報告

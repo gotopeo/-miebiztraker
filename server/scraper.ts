@@ -1,5 +1,4 @@
-import { Builder, By, until, WebElement, WebDriver } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
+import puppeteer, { Browser, Page } from "puppeteer";
 import { generateTenderCanonicalId } from "./tenderIdentity.js";
 
 /**
@@ -72,70 +71,73 @@ export interface ScraperResult {
 }
 
 /**
- * 三重県入札情報サイトのスクレイパー
+ * 三重県入札情報サイトのスクレイパー（Puppeteer版）
  */
 export class MieBiddingScraper {
-  private driver: WebDriver | null = null;
+  private browser: Browser | null = null;
+  private page: Page | null = null;
   private readonly baseUrl = "https://mie.efftis.jp/24000/ppi/pub";
   private readonly topPageUrl = "https://www.pref.mie.lg.jp/ebid-mie/83336046773.htm";
   private readonly maxRetries = 3;
   private readonly retryDelay = 5000; // 5秒
 
   /**
-   * WebDriverを初期化
+   * Puppeteerブラウザを初期化
    */
-  private async initDriver(): Promise<void> {
-    const options = new chrome.Options();
-    options.addArguments("--headless");
-    options.addArguments("--no-sandbox");
-    options.addArguments("--disable-dev-shm-usage");
-    options.addArguments("--disable-gpu");
-    options.addArguments("--window-size=1920,1080");
+  private async initBrowser(): Promise<void> {
+    console.log("[Scraper] Initializing Puppeteer browser");
+    
+    this.browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--window-size=1920,1080",
+      ],
+    });
 
-    // ChromeDriver 128を使用
-    const service = new chrome.ServiceBuilder("/usr/local/bin/chromedriver-128");
-
-    this.driver = await new Builder()
-      .forBrowser("chrome")
-      .setChromeOptions(options)
-      .setChromeService(service)
-      .build();
-
-    console.log("[Scraper] WebDriver initialized");
+    this.page = await this.browser.newPage();
+    await this.page.setViewport({ width: 1920, height: 1080 });
+    
+    console.log("[Scraper] Puppeteer browser initialized");
   }
 
   /**
    * TOPページから入札情報ページへ遷移
    */
   private async navigateFromTopPage(): Promise<void> {
-    if (!this.driver) throw new Error("Driver not initialized");
+    if (!this.page) throw new Error("Page not initialized");
 
     console.log("[Scraper] Navigating from TOP page");
-    await this.driver.get(this.topPageUrl);
-    await this.driver.sleep(2000);
+    await this.page.goto(this.topPageUrl, { waitUntil: "networkidle2" });
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     try {
       // 「入札情報（工事・委託）」ボタンを探す
-      const button = await this.driver.findElement(
-        By.xpath("//a[contains(text(), '入札情報') and contains(text(), '工事')]")
-      );
-      await button.click();
-      console.log("[Scraper] Clicked bidding information button");
+      const buttonSelector = 'a:has-text("入札情報")';
+      await this.page.waitForSelector(buttonSelector, { timeout: 10000 });
+      
+      // 新しいページが開くのを待機
+      const [newPage] = await Promise.all([
+        new Promise<Page>((resolve) => {
+          this.browser!.once("targetcreated", async (target) => {
+            const page = await target.page();
+            if (page) resolve(page);
+          });
+        }),
+        this.page.click(buttonSelector),
+      ]);
 
-      // 新しいウィンドウに切り替え
-      await this.driver.sleep(2000);
-      const handles = await this.driver.getAllWindowHandles();
-      if (handles.length > 1) {
-        await this.driver.switchTo().window(handles[1]);
-        console.log("[Scraper] Switched to new window");
-      }
-
-      await this.driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
+      // 新しいページに切り替え
+      this.page = newPage;
+      await this.page.waitForSelector("#searchBtn", { timeout: 15000 });
       console.log("[Scraper] Successfully navigated to bidding page");
     } catch (error) {
       console.warn("[Scraper] Failed to navigate from TOP page, accessing directly");
-      await this.driver.get(this.baseUrl);
-      await this.driver.wait(until.elementLocated(By.id("searchBtn")), 15000);
+      await this.page.goto(this.baseUrl, { waitUntil: "networkidle2" });
+      await this.page.waitForSelector("#searchBtn", { timeout: 15000 });
     }
   }
 
@@ -143,57 +145,53 @@ export class MieBiddingScraper {
    * 検索条件を設定
    */
   private async setSearchConditions(conditions: SearchConditions): Promise<void> {
-    if (!this.driver) throw new Error("Driver not initialized");
+    if (!this.page) throw new Error("Page not initialized");
 
     console.log("[Scraper] Setting search conditions:", JSON.stringify(conditions, null, 2));
 
     // 区分（工事/委託）
     if (conditions.projectType && conditions.projectType.length > 0) {
       if (conditions.projectType.includes("工事")) {
-        const checkbox = await this.driver.findElement(By.name("ankenKbn1"));
-        if (!(await checkbox.isSelected())) {
-          await checkbox.click();
+        const checkbox = await this.page.$('input[name="ankenKbn1"]');
+        if (checkbox) {
+          const isChecked = await this.page.evaluate((el) => (el as HTMLInputElement).checked, checkbox);
+          if (!isChecked) {
+            await checkbox.click();
+          }
         }
       }
       if (conditions.projectType.includes("委託")) {
-        const checkbox = await this.driver.findElement(By.name("ankenKbn2"));
-        if (!(await checkbox.isSelected())) {
-          await checkbox.click();
+        const checkbox = await this.page.$('input[name="ankenKbn2"]');
+        if (checkbox) {
+          const isChecked = await this.page.evaluate((el) => (el as HTMLInputElement).checked, checkbox);
+          if (!isChecked) {
+            await checkbox.click();
+          }
         }
       }
     }
 
     // 件名キーワード
     if (conditions.titleKeyword) {
-      const input = await this.driver.findElement(By.name("subjectName"));
-      await input.clear();
-      await input.sendKeys(conditions.titleKeyword);
+      await this.page.type('input[name="subjectName"]', conditions.titleKeyword);
     }
 
     // 履行場所
     if (conditions.location) {
-      const input = await this.driver.findElement(By.name("performLocation"));
-      await input.clear();
-      await input.sendKeys(conditions.location);
+      await this.page.type('input[name="performLocation"]', conditions.location);
     }
 
     // 施工番号
     if (conditions.constructionNo) {
-      const input = await this.driver.findElement(By.name("constructionNo"));
-      await input.clear();
-      await input.sendKeys(conditions.constructionNo);
+      await this.page.type('input[name="constructionNo"]', conditions.constructionNo);
     }
 
     // 予定価格
     if (conditions.estimatedPriceMin) {
-      const input = await this.driver.findElement(By.name("estimatePriceFrom"));
-      await input.clear();
-      await input.sendKeys(conditions.estimatedPriceMin.toString());
+      await this.page.type('input[name="estimatePriceFrom"]', conditions.estimatedPriceMin.toString());
     }
     if (conditions.estimatedPriceMax) {
-      const input = await this.driver.findElement(By.name("estimatePriceTo"));
-      await input.clear();
-      await input.sendKeys(conditions.estimatedPriceMax.toString());
+      await this.page.type('input[name="estimatePriceTo"]', conditions.estimatedPriceMax.toString());
     }
 
     console.log("[Scraper] Search conditions set successfully");
@@ -203,67 +201,73 @@ export class MieBiddingScraper {
    * 検索を実行
    */
   private async executeSearch(useLatest: boolean = true): Promise<void> {
-    if (!this.driver) throw new Error("Driver not initialized");
+    if (!this.page) throw new Error("Page not initialized");
 
     if (useLatest) {
       // 最新公告情報ボタンを実行
       console.log("[Scraper] Executing latest announcement search");
-      await this.driver.executeScript("LinkSubmit('P004','4','searchBtn');");
+      await this.page.evaluate(() => {
+        (window as any).LinkSubmit('P004', '4', 'searchBtn');
+      });
     } else {
       // 通常の検索実行
       console.log("[Scraper] Executing normal search");
-      await this.driver.executeScript("LinkSubmit('P004','2','searchBtn');");
+      await this.page.evaluate(() => {
+        (window as any).LinkSubmit('P004', '2', 'searchBtn');
+      });
     }
 
     // ページ遷移を待機
-    await this.driver.sleep(8000);
+    await new Promise(resolve => setTimeout(resolve, 8000));
     console.log("[Scraper] Search executed");
   }
 
   /**
    * 結果テーブルを特定
    */
-  private async findResultTable(): Promise<WebElement | null> {
-    if (!this.driver) throw new Error("Driver not initialized");
+  private async findResultTable(): Promise<boolean> {
+    if (!this.page) throw new Error("Page not initialized");
 
-    const tables = await this.driver.findElements(By.css("table"));
+    const tables = await this.page.$$("table");
     console.log(`[Scraper] Found ${tables.length} tables`);
 
     for (const table of tables) {
       try {
-        const firstRow = await table.findElement(By.css("tr"));
-        const headerText = await firstRow.getText();
+        const firstRowText = await table.$eval("tr", (row) => row.textContent || "");
         
-        if (headerText.includes("案件名称") && headerText.includes("発注機関")) {
-          console.log(`[Scraper] Found result table with header: ${headerText.substring(0, 50)}`);
-          return table;
+        if (firstRowText.includes("案件名称") && firstRowText.includes("発注機関")) {
+          console.log(`[Scraper] Found result table with header: ${firstRowText.substring(0, 50)}`);
+          return true;
         }
       } catch (error) {
         continue;
       }
     }
 
-    return null;
+    return false;
   }
 
   /**
    * テーブルからデータを抽出
    */
-  private async extractDataFromTable(table: WebElement): Promise<ScrapedBiddingItem[]> {
+  private async extractDataFromTable(): Promise<ScrapedBiddingItem[]> {
+    if (!this.page) throw new Error("Page not initialized");
+
     const items: ScrapedBiddingItem[] = [];
-    const rows = await table.findElements(By.css("tr"));
+
+    const rows = await this.page.$$("table tr");
     console.log(`[Scraper] Found ${rows.length} rows in result table`);
 
     for (let i = 1; i < rows.length; i++) {
       try {
-        const cells = await rows[i].findElements(By.css("td"));
+        const cells = await rows[i].$$("td");
         if (cells.length < 9) {
           console.log(`[Scraper] Row ${i} has only ${cells.length} cells, skipping`);
           continue;
         }
 
         const cellTexts = await Promise.all(
-          cells.map(cell => cell.getText())
+          cells.map((cell) => cell.evaluate((el) => el.textContent?.trim() || ""))
         );
 
         // 発注機関と施行番号を分割
@@ -279,8 +283,10 @@ export class MieBiddingScraper {
         // 詳細ページURLを取得
         let detailUrl = "";
         try {
-          const link = await cells[3].findElement(By.css("a"));
-          detailUrl = await link.getAttribute("href");
+          const link = await cells[3].$("a");
+          if (link) {
+            detailUrl = await link.evaluate((el) => (el as HTMLAnchorElement).href);
+          }
         } catch (error) {
           // リンクがない場合はスキップ
         }
@@ -311,12 +317,10 @@ export class MieBiddingScraper {
    * 次ページが存在するかチェック
    */
   private async hasNextPage(): Promise<boolean> {
-    if (!this.driver) return false;
+    if (!this.page) return false;
 
     try {
-      const nextPageLinks = await this.driver.findElements(
-        By.xpath("//a[contains(text(), '次ページ')]")
-      );
+      const nextPageLinks = await this.page.$$('a:has-text("次ページ")');
       return nextPageLinks.length > 0;
     } catch (error) {
       return false;
@@ -327,124 +331,117 @@ export class MieBiddingScraper {
    * 次ページへ遷移
    */
   private async goToNextPage(): Promise<void> {
-    if (!this.driver) throw new Error("Driver not initialized");
+    if (!this.page) throw new Error("Page not initialized");
 
     console.log("[Scraper] Navigating to next page");
-    const nextPageLink = await this.driver.findElement(
-      By.xpath("//a[contains(text(), '次ページ')]")
-    );
-    await nextPageLink.click();
-    await this.driver.sleep(5000);
+    await this.page.click('a:has-text("次ページ")');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log("[Scraper] Navigated to next page");
   }
 
   /**
-   * 個別案件の詳細情報を取得
+   * 詳細ページから追加情報を取得
    */
   private async fetchDetailInfo(item: ScrapedBiddingItem): Promise<void> {
-    if (!this.driver || !item.detailUrl) return;
+    if (!this.page || !item.detailUrl) return;
 
     try {
-      console.log(`[Scraper] Fetching detail for case ${item.caseNumber}`);
+      console.log(`[Scraper] Fetching detail info for: ${item.title}`);
       
-      // 現在のウィンドウハンドルを保存
-      const mainWindow = await this.driver.getWindowHandle();
-      
-      // 新しいタブで詳細ページを開く
-      await this.driver.executeScript(`window.open('${item.detailUrl}', '_blank');`);
-      await this.driver.sleep(2000);
-      
-      // 新しいタブに切り替え
-      const handles = await this.driver.getAllWindowHandles();
-      await this.driver.switchTo().window(handles[handles.length - 1]);
-      
+      // 新しいページで詳細を開く
+      const detailPage = await this.browser!.newPage();
+      await detailPage.goto(item.detailUrl, { waitUntil: "networkidle2" });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // 詳細情報を抽出（実装は省略、必要に応じて追加）
-      // TODO: 詳細ページの構造に応じて実装
-      
-      // タブを閉じて元のウィンドウに戻る
-      await this.driver.close();
-      await this.driver.switchTo().window(mainWindow);
-      
-      console.log(`[Scraper] Detail fetched for case ${item.caseNumber}`);
+      // item.estimatedPrice = ...
+      // item.location = ...
+      // item.constructionPeriod = ...
+      // item.publicationDate = ...
+      // item.biddingDate = ...
+      // item.applicationDeadline = ...
+      // item.remarks = ...
+
+      await detailPage.close();
+      console.log(`[Scraper] Detail info fetched for: ${item.title}`);
     } catch (error) {
-      console.error(`[Scraper] Error fetching detail for case ${item.caseNumber}:`, error);
+      console.error(`[Scraper] Error fetching detail info for ${item.title}:`, error);
     }
   }
 
   /**
    * スクレイピングを実行
    */
-  async scrape(conditions: SearchConditions = {}, fetchDetails: boolean = false): Promise<ScraperResult> {
+  async scrape(conditions: SearchConditions = {}): Promise<ScraperResult> {
     let retryCount = 0;
-
+    
     while (retryCount < this.maxRetries) {
       try {
-        // WebDriverを初期化
-        await this.initDriver();
-
-        // TOPページから遷移するか、直接アクセス
-        if (conditions.useLatestAnnouncement) {
-          await this.driver!.get(this.baseUrl);
-          await this.driver!.wait(until.elementLocated(By.id("searchBtn")), 15000);
-        } else {
-          await this.navigateFromTopPage();
-        }
-
+        console.log(`[Scraper] Starting scrape attempt ${retryCount + 1}/${this.maxRetries}`);
+        
+        // ブラウザ初期化
+        await this.initBrowser();
+        
+        // TOPページから遷移
+        await this.navigateFromTopPage();
+        
         // 検索条件を設定
         if (!conditions.useLatestAnnouncement) {
           await this.setSearchConditions(conditions);
         }
-
-        // 検索を実行
+        
+        // 検索実行
         await this.executeSearch(conditions.useLatestAnnouncement ?? true);
-
-        // 全ページのデータを収集
-        const allItems: ScrapedBiddingItem[] = [];
-        let pageCount = 1;
-
+        
+        // 結果テーブルを探す
+        const hasTable = await this.findResultTable();
+        if (!hasTable) {
+          throw new Error("Result table not found");
+        }
+        
+        // データ抽出
+        let allItems: ScrapedBiddingItem[] = [];
+        let pageCount = 0;
+        
         do {
-          console.log(`[Scraper] Processing page ${pageCount}`);
+          pageCount++;
+          console.log(`[Scraper] Extracting data from page ${pageCount}`);
           
-          // 結果テーブルを特定
-          const resultTable = await this.findResultTable();
-          if (!resultTable) {
-            throw new Error("Result table not found");
-          }
-
-          // データを抽出
-          const pageItems = await this.extractDataFromTable(resultTable);
-          allItems.push(...pageItems);
-
-          // 詳細情報を取得（オプション）
-          if (fetchDetails) {
-            for (const item of pageItems) {
-              await this.fetchDetailInfo(item);
-            }
-          }
-
-          // 次ページがあるかチェック
+          const pageItems = await this.extractDataFromTable();
+          allItems = allItems.concat(pageItems);
+          
+          console.log(`[Scraper] Extracted ${pageItems.length} items from page ${pageCount}`);
+          
+          // 次ページがあれば遷移
           if (await this.hasNextPage()) {
             await this.goToNextPage();
-            pageCount++;
           } else {
             break;
           }
-        } while (true);
-
+        } while (pageCount < 10); // 最大10ページまで
+        
         console.log(`[Scraper] Successfully scraped ${allItems.length} items from ${pageCount} pages`);
-
+        
+        // ブラウザを閉じる
+        await this.cleanup();
+        
         return {
           success: true,
           items: allItems,
           totalCount: allItems.length,
         };
-
+        
       } catch (error) {
+        console.error(`[Scraper] Error during scrape attempt ${retryCount + 1}:`, error);
+        
+        // クリーンアップ
+        await this.cleanup();
+        
         retryCount++;
-        console.error(`[Scraper] Error (attempt ${retryCount}/${this.maxRetries}):`, error);
-
+        
         if (retryCount < this.maxRetries) {
           console.log(`[Scraper] Retrying in ${this.retryDelay / 1000} seconds...`);
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+          await new Promise((resolve) => setTimeout(resolve, this.retryDelay));
         } else {
           return {
             success: false,
@@ -453,20 +450,9 @@ export class MieBiddingScraper {
             errorMessage: error instanceof Error ? error.message : String(error),
           };
         }
-      } finally {
-        // WebDriverをクローズ
-        if (this.driver) {
-          try {
-            await this.driver.quit();
-            console.log("[Scraper] WebDriver closed");
-          } catch (error) {
-            console.error("[Scraper] Error closing WebDriver:", error);
-          }
-          this.driver = null;
-        }
       }
     }
-
+    
     return {
       success: false,
       items: [],
@@ -474,24 +460,42 @@ export class MieBiddingScraper {
       errorMessage: "Max retries exceeded",
     };
   }
+
+  /**
+   * リソースをクリーンアップ
+   */
+  async cleanup(): Promise<void> {
+    try {
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+        this.page = null;
+        console.log("[Scraper] Browser closed");
+      }
+    } catch (error) {
+      console.error("[Scraper] Error during cleanup:", error);
+    }
+  }
 }
 
 /**
- * スクレイピングを実行する関数（エクスポート用）
+ * スクレイピングを実行する便利関数
  */
-export async function scrapeMieBiddings(
-  conditions: SearchConditions = {},
-  fetchDetails: boolean = false
+export async function scrapeMieBidding(
+  conditions: SearchConditions = {}
 ): Promise<ScraperResult> {
   const scraper = new MieBiddingScraper();
-  return await scraper.scrape(conditions, fetchDetails);
+  try {
+    return await scraper.scrape(conditions);
+  } finally {
+    await scraper.cleanup();
+  }
 }
 
 /**
- * ScrapedBiddingItemをInsertBiddingに変換
+ * ScrapedBiddingItemをデータベース挿入用に変換
  */
 export function convertToInsertBidding(item: ScrapedBiddingItem): any {
-  
   const bidding: any = {
     caseNumber: item.caseNumber,
     title: item.title,
@@ -517,4 +521,15 @@ export function convertToInsertBidding(item: ScrapedBiddingItem): any {
   bidding.tenderCanonicalId = generateTenderCanonicalId(bidding);
   
   return bidding;
+}
+
+/**
+ * scrapeMieBiddingsのエイリアス（後方互換性のため）
+ */
+export async function scrapeMieBiddings(
+  conditions: SearchConditions = {},
+  fetchDetails: boolean = false
+): Promise<ScraperResult> {
+  // fetchDetailsパラメータは現在未実装（将来的に追加予定）
+  return scrapeMieBidding(conditions);
 }

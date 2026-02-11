@@ -71,6 +71,20 @@
       "when": 1769652484957,
       "tag": "0009_thin_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1770798259235,
+      "tag": "0010_romantic_reavers",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1770798303818,
+      "tag": "0011_strange_tomorrow_man",
+      "breakpoints": true
     }
   ]
 }
