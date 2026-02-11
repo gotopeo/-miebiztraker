@@ -21,15 +21,20 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, FileText, Play, Key, Clock, MessageSquare, Bell } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "ダッシュボード", path: "/" },
+  { icon: FileText, label: "入札情報一覧", path: "/biddings" },
+  { icon: Play, label: "スクレイピング実行", path: "/scraping" },
+  { icon: Clock, label: "スケジュール設定", path: "/schedules" },
+  { icon: Key, label: "キーワード監視", path: "/keywords" },
+  { icon: MessageSquare, label: "LINE連携", path: "/line-connection" },
+  { icon: Bell, label: "通知設定", path: "/notifications" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -171,7 +176,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    MBT
                   </span>
                 </div>
               ) : null}

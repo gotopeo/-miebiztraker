@@ -1,0 +1,1 @@
+ALTER TABLE `notificationSubscriptions` ADD `enableUpdateNotification` boolean DEFAULT false NOT NULL;

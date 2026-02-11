@@ -1,0 +1,36 @@
+{
+  "query": "SELECT * FROM scrapingLogs WHERE startedAt >= '2026-01-20 03:15:00' AND startedAt <= '2026-01-20 03:15:10' ORDER BY startedAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT * FROM scrapingLogs WHERE startedAt >= '2026-01-20 03:15:00' AND startedAt <= '2026-01-20 03:15:10' ORDER BY startedAt DESC;",
+  "rows": [
+    {
+      "id": "150002",
+      "userId": "NULL",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-20 03:15:08",
+      "finishedAt": "2026-01-20 03:15:28",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "errorDetails": "NULL",
+      "createdAt": "2026-01-20 03:15:29"
+    },
+    {
+      "id": "150004",
+      "userId": "NULL",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-20 03:15:00",
+      "finishedAt": "2026-01-20 03:18:07",
+      "status": "success",
+      "itemsScraped": "59",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "errorDetails": "NULL",
+      "createdAt": "2026-01-20 03:18:07"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\texecutionType\tstartedAt\tfinishedAt\tstatus\titemsScraped\tnewItems\terrorMessage\terrorDetails\tcreatedAt\n150002\tNULL\tscheduled\t2026-01-20 03:15:08\t2026-01-20 03:15:28\tsuccess\t0\t0\tNULL\tNULL\t2026-01-20 03:15:29\n150004\tNULL\tscheduled\t2026-01-20 03:15:00\t2026-01-20 03:18:07\tsuccess\t59\t0\tNULL\tNULL\t2026-01-20 03:18:07\n",
+  "stderr": "",
+  "execution_time_ms": 1546
+}

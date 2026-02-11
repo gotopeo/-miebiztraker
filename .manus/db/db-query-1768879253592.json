@@ -1,0 +1,42 @@
+{
+  "query": "SELECT id, name, scheduleType, executionTime, cronExpression, enabled FROM scheduleSettings ORDER BY executionTime;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, name, scheduleType, executionTime, cronExpression, enabled FROM scheduleSettings ORDER BY executionTime;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "毎日９時更新",
+      "scheduleType": "daily",
+      "executionTime": "09:00",
+      "cronExpression": "NULL",
+      "enabled": "1"
+    },
+    {
+      "id": "2",
+      "name": "毎日12時更新",
+      "scheduleType": "daily",
+      "executionTime": "12:00",
+      "cronExpression": "NULL",
+      "enabled": "1"
+    },
+    {
+      "id": "60001",
+      "name": "テスト",
+      "scheduleType": "daily",
+      "executionTime": "12:15",
+      "cronExpression": "NULL",
+      "enabled": "1"
+    },
+    {
+      "id": "4",
+      "name": "毎日16時更新",
+      "scheduleType": "daily",
+      "executionTime": "16:00",
+      "cronExpression": "NULL",
+      "enabled": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tscheduleType\texecutionTime\tcronExpression\tenabled\n1\t毎日９時更新\tdaily\t09:00\tNULL\t1\n2\t毎日12時更新\tdaily\t12:00\tNULL\t1\n60001\tテスト\tdaily\t12:15\tNULL\t1\n4\t毎日16時更新\tdaily\t16:00\tNULL\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1501
+}

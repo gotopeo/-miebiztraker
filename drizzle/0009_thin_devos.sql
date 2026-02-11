@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `isOnboarded` boolean DEFAULT false NOT NULL;

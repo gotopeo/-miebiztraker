@@ -1,0 +1,110 @@
+{
+  "query": "SELECT \n  id,\n  executionType,\n  startedAt,\n  finishedAt,\n  status,\n  itemsScraped,\n  newItems,\n  errorMessage\nFROM scrapingLogs\nORDER BY startedAt DESC\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT \n  id,\n  executionType,\n  startedAt,\n  finishedAt,\n  status,\n  itemsScraped,\n  newItems,\n  errorMessage\nFROM scrapingLogs\nORDER BY startedAt DESC\nLIMIT 10;",
+  "rows": [
+    {
+      "id": "450001",
+      "executionType": "manual",
+      "startedAt": "2026-01-23 05:08:31",
+      "finishedAt": "2026-01-23 05:10:12",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "420002",
+      "executionType": "manual",
+      "startedAt": "2026-01-23 04:03:44",
+      "finishedAt": "2026-01-23 04:05:43",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "420001",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-23 03:46:26",
+      "finishedAt": "2026-01-23 03:48:37",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "390001",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-23 03:00:00",
+      "finishedAt": "2026-01-23 03:02:12",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "360001",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-23 01:11:24",
+      "finishedAt": "2026-01-23 01:13:35",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "360002",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-23 01:11:24",
+      "finishedAt": "2026-01-23 01:13:40",
+      "status": "success",
+      "itemsScraped": "87",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "330002",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-22 03:36:06",
+      "finishedAt": "2026-01-22 03:37:41",
+      "status": "success",
+      "itemsScraped": "64",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "330001",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-22 03:36:06",
+      "finishedAt": "2026-01-22 03:37:39",
+      "status": "success",
+      "itemsScraped": "64",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "300001",
+      "executionType": "manual",
+      "startedAt": "2026-01-22 00:14:20",
+      "finishedAt": "2026-01-22 00:16:16",
+      "status": "success",
+      "itemsScraped": "65",
+      "newItems": "2",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "270001",
+      "executionType": "scheduled",
+      "startedAt": "2026-01-22 00:00:00",
+      "finishedAt": "2026-01-22 00:01:45",
+      "status": "success",
+      "itemsScraped": "63",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texecutionType\tstartedAt\tfinishedAt\tstatus\titemsScraped\tnewItems\terrorMessage\n450001\tmanual\t2026-01-23 05:08:31\t2026-01-23 05:10:12\tsuccess\t87\t0\tNULL\n420002\tmanual\t2026-01-23 04:03:44\t2026-01-23 04:05:43\tsuccess\t87\t0\tNULL\n420001\tscheduled\t2026-01-23 03:46:26\t2026-01-23 03:48:37\tsuccess\t87\t0\tNULL\n390001\tscheduled\t2026-01-23 03:00:00\t2026-01-23 03:02:12\tsuccess\t87\t0\tNULL\n360001\tscheduled\t2026-01-23 01:11:24\t2026-01-23 01:13:35\tsuccess\t87\t0\tNULL\n360002\tscheduled\t2026-01-23 01:11:24\t2026-01-23 01:13:40\tsuccess\t87\t0\tNULL\n330002\tscheduled\t2026-01-22 03:36:06\t2026-01-22 03:37:41\tsuccess\t64\t0\tNULL\n330001\tscheduled\t2026-01-22 03:36:06\t2026-01-22 03:37:39\tsuccess\t64\t0\tNULL\n300001\tmanual\t2026-01-22 00:14:20\t2026-01-22 00:16:16\tsuccess\t65\t2\tNULL\n270001\tscheduled\t2026-01-22 00:00:00\t2026-01-22 00:01:45\tsuccess\t63\t0\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1546
+}

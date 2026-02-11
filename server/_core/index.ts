@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeScheduler, shutdownScheduler } from "../scheduler";
+import { lineWebhookRouter } from "../lineWebhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,11 +32,18 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // LINE Webhook用に生のリクエストボディを保存
+  app.use("/api/line/webhook", express.raw({ type: "application/json" }));
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // LINE Webhook under /api/line/webhook
+  app.use("/api/line", lineWebhookRouter);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -57,8 +66,28 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // スケジューラーを初期化
+    await initializeScheduler();
+  });
+  
+  // サーバー終了時にスケジューラーをシャットダウン
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    shutdownScheduler();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received: closing HTTP server');
+    shutdownScheduler();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
   });
 }
 

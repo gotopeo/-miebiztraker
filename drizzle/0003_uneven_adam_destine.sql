@@ -1,0 +1,1 @@
+ALTER TABLE `biddings` ADD `firstScrapedAt` timestamp;

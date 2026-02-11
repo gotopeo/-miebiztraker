@@ -1,0 +1,110 @@
+{
+  "query": "SELECT * FROM issuers LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT * FROM issuers LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "県土整備部",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "1",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:49",
+      "updatedAt": "2026-01-27 05:34:49"
+    },
+    {
+      "id": "2",
+      "name": "桑名建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "2",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:49",
+      "updatedAt": "2026-01-27 05:34:49"
+    },
+    {
+      "id": "3",
+      "name": "四日市建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "3",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:49",
+      "updatedAt": "2026-01-27 05:34:49"
+    },
+    {
+      "id": "4",
+      "name": "鈴鹿建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "4",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:49",
+      "updatedAt": "2026-01-27 05:34:49"
+    },
+    {
+      "id": "5",
+      "name": "津建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "5",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:50",
+      "updatedAt": "2026-01-27 05:34:50"
+    },
+    {
+      "id": "6",
+      "name": "松阪建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "6",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:50",
+      "updatedAt": "2026-01-27 05:34:50"
+    },
+    {
+      "id": "7",
+      "name": "伊勢建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "7",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:50",
+      "updatedAt": "2026-01-27 05:34:50"
+    },
+    {
+      "id": "8",
+      "name": "伊賀建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "8",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:50",
+      "updatedAt": "2026-01-27 05:34:50"
+    },
+    {
+      "id": "9",
+      "name": "尾鷲建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "9",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:50",
+      "updatedAt": "2026-01-27 05:34:50"
+    },
+    {
+      "id": "10",
+      "name": "熊野建設事務所",
+      "code": "NULL",
+      "category": "県土整備部",
+      "sortOrder": "10",
+      "isActive": "1",
+      "createdAt": "2026-01-27 05:34:51",
+      "updatedAt": "2026-01-27 05:34:51"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcode\tcategory\tsortOrder\tisActive\tcreatedAt\tupdatedAt\n1\t県土整備部\tNULL\t県土整備部\t1\t1\t2026-01-27 05:34:49\t2026-01-27 05:34:49\n2\t桑名建設事務所\tNULL\t県土整備部\t2\t1\t2026-01-27 05:34:49\t2026-01-27 05:34:49\n3\t四日市建設事務所\tNULL\t県土整備部\t3\t1\t2026-01-27 05:34:49\t2026-01-27 05:34:49\n4\t鈴鹿建設事務所\tNULL\t県土整備部\t4\t1\t2026-01-27 05:34:49\t2026-01-27 05:34:49\n5\t津建設事務所\tNULL\t県土整備部\t5\t1\t2026-01-27 05:34:50\t2026-01-27 05:34:50\n6\t松阪建設事務所\tNULL\t県土整備部\t6\t1\t2026-01-27 05:34:50\t2026-01-27 05:34:50\n7\t伊勢建設事務所\tNULL\t県土整備部\t7\t1\t2026-01-27 05:34:50\t2026-01-27 05:34:50\n8\t伊賀建設事務所\tNULL\t県土整備部\t8\t1\t2026-01-27 05:34:50\t2026-01-27 05:34:50\n9\t尾鷲建設事務所\tNULL\t県土整備部\t9\t1\t2026-01-27 05:34:50\t2026-01-27 05:34:50\n10\t熊野建設事務所\tNULL\t県土整備部\t10\t1\t2026-01-27 05:34:51\t2026-01-27 05:34:51\n",
+  "stderr": "",
+  "execution_time_ms": 1616
+}

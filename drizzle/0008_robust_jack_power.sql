@@ -1,0 +1,1 @@
+ALTER TABLE `notificationSubscriptions` ADD `orderOrganNames` text;

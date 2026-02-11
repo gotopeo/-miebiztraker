@@ -4,32 +4,44 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import Landing from "./pages/Landing";
+import LiffSuccess from "./pages/LiffSuccess";
+import AdminLogin from "./pages/AdminLogin";
 import Home from "./pages/Home";
+import BiddingList from "./pages/BiddingList";
+import ScrapingLogs from "./pages/ScrapingLogs";
+import KeywordSettings from "./pages/KeywordSettings";
+import ScheduleSettings from "./pages/ScheduleSettings";
+import LineConnection from "./pages/LineConnection";
+import NotificationSettings from "./pages/NotificationSettings";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserDetail from "./pages/UserDetail";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Landing} />
+      <Route path={"/liff-success"} component={LiffSuccess} />
+      <Route path={"/admin/login"} component={AdminLogin} />
+      <Route path={"/admin/users/:userId"} component={UserDetail} />
+      <Route path={"/admin/dashboard"} component={AdminDashboard} />
+      <Route path={"/admin"} component={Home} />
+      <Route path={"/biddings"} component={BiddingList} />
+      <Route path={"/scraping"} component={ScrapingLogs} />
+      <Route path={"/keywords"} component={KeywordSettings} />
+      <Route path={"/schedules"} component={ScheduleSettings} />
+      <Route path={"/line-connection"} component={LineConnection} />
+      <Route path={"/notifications"} component={NotificationSettings} />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

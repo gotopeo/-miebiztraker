@@ -1,5 +1,76 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1768610663517,
+      "tag": "0000_uneven_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1768610810046,
+      "tag": "0001_fantastic_tenebrous",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768718466157,
+      "tag": "0002_peaceful_romulus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768880424169,
+      "tag": "0003_uneven_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1769132636562,
+      "tag": "0004_stiff_sunfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1769490650845,
+      "tag": "0005_even_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769497412419,
+      "tag": "0006_massive_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1769515316624,
+      "tag": "0007_daffy_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1769518236764,
+      "tag": "0008_robust_jack_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1769652484957,
+      "tag": "0009_thin_devos",
+      "breakpoints": true
+    }
+  ]
 }
