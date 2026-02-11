@@ -87,8 +87,13 @@ export class MieBiddingScraper {
   private async initBrowser(): Promise<void> {
     console.log("[Scraper] Initializing Puppeteer browser");
     
+    // Puppeteerのデフォルトのexecutable pathを取得
+    const executablePath = puppeteer.executablePath();
+    console.log("[Scraper] Using Chrome at:", executablePath);
+    
     this.browser = await puppeteer.launch({
       headless: true,
+      executablePath,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
