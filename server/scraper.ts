@@ -104,7 +104,17 @@ export class MieBiddingScraper {
     console.log("[Scraper] ⚠️  Chrome not found. Installing...");
     
     try {
-      execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
+      console.log("[Scraper] Installing Chrome with dependencies...");
+      
+      try {
+        // まず --install-deps を試す（root権限が必要）
+        execSync("npx @puppeteer/browsers install chrome@stable --install-deps", { stdio: "inherit" });
+        console.log("[Scraper] Chrome and system dependencies installed");
+      } catch (depsError) {
+        console.warn("[Scraper] ⚠️  Failed to install with --install-deps. Trying without...");
+        execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
+        console.log("[Scraper] Chrome installed (system dependencies may need manual installation)");
+      }
       
       const p2 = puppeteer.executablePath();
       console.log("[Scraper] After install executablePath =", p2);

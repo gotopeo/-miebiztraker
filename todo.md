@@ -88,3 +88,29 @@ ChromeDriverエラー「spawn /usr/local/bin/chromedriver-128 ENOENT」を根本
 - [ ] チェックポイントを保存
 - [ ] Publish後、本番環境でスクレイピングを実行
 - [ ] 本番環境のログを確認して問題を特定
+
+---
+
+## Chromium実行に必要なシステムライブラリのインストール
+
+### 問題の本質
+Chromiumのバイナリはインストールされたが、実行に必要なシステムライブラリ（libglib-2.0.so.0など）が不足している。
+
+### エラー内容
+```
+Failed to launch the browser process: Code: 127
+stderr: /usr/src/app/.cache/puppeteer/chrome/linux-145.0.7632.46/chrome-linux64/chrome: error while loading shared libraries: libglib-2.0.so.0: cannot open shared object file: No such file or directory
+```
+
+### フェーズ1: タスク追加
+- [x] todo.mdに新しいタスクを追加
+
+### フェーズ2: システムライブラリインストールスクリプトを作成
+- [x] `scripts/ensure-chrome.mjs`を修正して`--install-deps`フラグを使用
+- [x] `server/scraper.ts`の`ensureChrome()`も同様に修正
+- [x] root権限がない場合のフォールバック処理を追加
+
+### フェーズ3: 動作確認とチェックポイント保存
+- [x] チェックポイントを保存
+- [ ] Publish後、本番環境でスクレイピングを実行
+- [ ] システムライブラリが正常にインストールされ、スクレイピングが成功することを確認

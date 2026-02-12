@@ -19,7 +19,20 @@ if (fs.existsSync(p)) {
 console.log("[postinstall] ⚠️  Chrome not found. Installing...");
 
 try {
-  execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
+  // --install-deps フラグを使用してシステムライブラリもインストール
+  // ただし、root権限が必要なため、環境によっては失敗する可能性がある
+  console.log("[postinstall] Installing Chrome with dependencies...");
+  
+  try {
+    // まず --install-deps を試す（root権限が必要）
+    execSync("npx @puppeteer/browsers install chrome@stable --install-deps", { stdio: "inherit" });
+    console.log("[postinstall] Chrome and system dependencies installed");
+  } catch (depsError) {
+    console.warn("[postinstall] ⚠️  Failed to install with --install-deps (may need root). Trying without...");
+    // 失敗した場合は通常のインストールを試す
+    execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
+    console.log("[postinstall] Chrome installed (system dependencies may need manual installation)");
+  }
   
   const p2 = puppeteer.executablePath();
   console.log("[postinstall] After install executablePath =", p2);
