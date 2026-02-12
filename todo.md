@@ -358,10 +358,40 @@ Publish後も同じエラーが発生：`libglib-2.0.so.0: cannot open shared ob
 - [x] SearchConditions型に不足していたフィールドを追加
 
 ### フェーズ3: チェックポイントを保存してデプロイ
-- [ ] チェックポイントを保存
-- [ ] Publishボタンでデプロイ
+- [x] チェックポイントを保存
+- [ ] Publishボタンでデプロイ（ユーザーが実行）
 
 ### フェーズ4: 本番環境でテストして結果を報告
 - [ ] 手動スクレイピングをテスト
 - [ ] スケジュール実行を確認
 - [ ] 結果を報告
+
+
+---
+
+## デプロイエラーの修正（ensure-chrome.mjsがPuppeteerをimport）
+
+**エラー内容**:
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp/deploy-s3-v2-2494819927/scripts/ensure-chrome.mjs
+```
+
+**原因**:
+- `scripts/ensure-chrome.mjs`がまだPuppeteerをimportしようとしている
+- postinstallスクリプトで`node scripts/ensure-chrome.mjs`が実行される
+
+**解決策**:
+- `scripts/ensure-chrome.mjs`をSelenium用に修正
+- または、postinstallスクリプトを削除（Seleniumのchromedriverは自動でインストールされる）
+
+### フェーズ1: ensure-chrome.mjsをSelenium用に修正
+- [x] ensure-chrome.mjsの内容を確認
+- [x] postinstallスクリプトを削除（Seleniumのchromedriverが自動インストール）
+
+### フェーズ2: チェックポイントを保存して再デプロイ
+- [ ] チェックポイントを保存
+- [ ] Publishボタンでデプロイ
+
+### フェーズ3: 本番環境でテストして結果を報告
+- [ ] 手動スクレイピングをテスト
+- [ ] スケジュール実行を確認
