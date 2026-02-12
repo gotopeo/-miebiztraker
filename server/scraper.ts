@@ -204,20 +204,24 @@ export class MieBiddingScraper {
     if (useLatest) {
       // 最新公告情報ボタンを実行
       console.log("[Scraper] Executing latest announcement search");
-      await this.page.evaluate(() => {
-        (window as any).LinkSubmit('P004', '4', 'searchBtn');
-      });
+      await Promise.all([
+        this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
+        this.page.evaluate(() => {
+          (window as any).LinkSubmit('P004', '4', 'searchBtn');
+        })
+      ]);
     } else {
       // 通常の検索実行
       console.log("[Scraper] Executing normal search");
-      await this.page.evaluate(() => {
-        (window as any).LinkSubmit('P004', '2', 'searchBtn');
-      });
+      await Promise.all([
+        this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
+        this.page.evaluate(() => {
+          (window as any).LinkSubmit('P004', '2', 'searchBtn');
+        })
+      ]);
     }
 
-    // ページ遷移を待機
-    await new Promise(resolve => setTimeout(resolve, 8000));
-    console.log("[Scraper] Search executed");
+    console.log("[Scraper] Search executed and page loaded");
   }
 
   /**
