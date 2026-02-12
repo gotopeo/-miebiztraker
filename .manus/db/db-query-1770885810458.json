@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COUNT(*) as total, MAX(createdAt) as latest_created, MIN(createdAt) as earliest_created FROM biddings WHERE createdAt >= '2026-02-12 00:00:00' AND createdAt < '2026-02-13 00:00:00';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT COUNT(*) as total, MAX(createdAt) as latest_created, MIN(createdAt) as earliest_created FROM biddings WHERE createdAt >= '2026-02-12 00:00:00' AND createdAt < '2026-02-13 00:00:00';",
+  "rows": [
+    {
+      "total": "16",
+      "latest_created": "2026-02-12 07:01:39",
+      "earliest_created": "2026-02-12 07:01:20"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tlatest_created\tearliest_created\n16\t2026-02-12 07:01:39\t2026-02-12 07:01:20\n",
+  "stderr": "",
+  "execution_time_ms": 1496
+}

@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from "playwright";
+import puppeteer, { Browser, Page } from "puppeteer";
 import { generateTenderCanonicalId } from "./tenderIdentity.js";
 import fs from "node:fs";
 import { execSync } from "node:child_process";
@@ -84,12 +84,12 @@ export class MieBiddingScraper {
   private readonly retryDelay = 5000; // 5秒
 
   /**
-   * Playwrightブラウザを初期化
+   * Puppeteerブラウザを初期化
    */
   private async initBrowser(): Promise<void> {
-    console.log("[Scraper] Initializing Playwright browser");
+    console.log("[Scraper] Initializing Puppeteer browser");
     
-    this.browser = await chromium.launch({
+    this.browser = await puppeteer.launch({
       headless: true,
       args: [
         "--no-sandbox",
@@ -100,9 +100,9 @@ export class MieBiddingScraper {
     });
 
     this.page = await this.browser.newPage();
-    await this.page.setViewportSize({ width: 1920, height: 1080 });
+    await this.page.setViewport({ width: 1920, height: 1080 });
     
-    console.log("[Scraper] Playwright browser initialized");
+    console.log("[Scraper] Puppeteer browser initialized");
   }
 
   /**
@@ -112,7 +112,7 @@ export class MieBiddingScraper {
     if (!this.page) throw new Error("Page not initialized");
 
     console.log("[Scraper] Navigating from TOP page");
-    await this.page.goto(this.topPageUrl, { waitUntil: "networkidle" });
+    await this.page.goto(this.topPageUrl, { waitUntil: "networkidle2" });
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     try {
@@ -121,18 +121,20 @@ export class MieBiddingScraper {
       await this.page.waitForSelector(buttonSelector, { timeout: 10000 });
       
       // 新しいページが開くのを待機
-      const [newPage] = await Promise.all([
-        this.page.context().waitForEvent("page"),
-        this.page.click(buttonSelector),
-      ]);
-
-      // 新しいページに切り替え
-      this.page = newPage;
+      const newPagePromise = new Promise<Page>((resolve) => {
+        this.browser!.once("targetcreated", async (target) => {
+          const newPage = await target.page();
+          if (newPage) resolve(newPage);
+        });
+      });
+      
+      await this.page.click(buttonSelector);
+      this.page = await newPagePromise;
       await this.page.waitForSelector("#searchBtn", { timeout: 15000 });
       console.log("[Scraper] Successfully navigated to bidding page");
     } catch (error) {
       console.warn("[Scraper] Failed to navigate from TOP page, accessing directly");
-      await this.page.goto(this.baseUrl, { waitUntil: "networkidle" });
+      await this.page.goto(this.baseUrl, { waitUntil: "networkidle2" });
       await this.page.waitForSelector("#searchBtn", { timeout: 15000 });
     }
   }
@@ -346,7 +348,7 @@ export class MieBiddingScraper {
       
       // 新しいページで詳細を開く
       const detailPage = await this.browser!.newPage();
-      await detailPage.goto(item.detailUrl, { waitUntil: "networkidle" });
+      await detailPage.goto(item.detailUrl, { waitUntil: "networkidle2" });
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // 詳細情報を抽出（実装は省略、必要に応じて追加）

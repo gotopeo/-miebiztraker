@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, executionType, startedAt, finishedAt, status, itemsScraped, newItems, errorMessage FROM scrapingLogs WHERE executionType = 'scheduled' AND status = 'success' ORDER BY startedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, executionType, startedAt, finishedAt, status, itemsScraped, newItems, errorMessage FROM scrapingLogs WHERE executionType = 'scheduled' AND status = 'success' ORDER BY startedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1770004",
+      "executionType": "scheduled",
+      "startedAt": "2026-02-12 08:47:07",
+      "finishedAt": "2026-02-12 08:47:25",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1710001",
+      "executionType": "scheduled",
+      "startedAt": "2026-02-12 07:00:06",
+      "finishedAt": "2026-02-12 07:00:25",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1710002",
+      "executionType": "scheduled",
+      "startedAt": "2026-02-12 07:00:00",
+      "finishedAt": "2026-02-12 07:02:23",
+      "status": "success",
+      "itemsScraped": "100",
+      "newItems": "16",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1650003",
+      "executionType": "scheduled",
+      "startedAt": "2026-02-12 04:38:07",
+      "finishedAt": "2026-02-12 04:38:25",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1500005",
+      "executionType": "scheduled",
+      "startedAt": "2026-02-11 09:15:08",
+      "finishedAt": "2026-02-11 09:15:21",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texecutionType\tstartedAt\tfinishedAt\tstatus\titemsScraped\tnewItems\terrorMessage\n1770004\tscheduled\t2026-02-12 08:47:07\t2026-02-12 08:47:25\tsuccess\t0\t0\tNULL\n1710001\tscheduled\t2026-02-12 07:00:06\t2026-02-12 07:00:25\tsuccess\t0\t0\tNULL\n1710002\tscheduled\t2026-02-12 07:00:00\t2026-02-12 07:02:23\tsuccess\t100\t16\tNULL\n1650003\tscheduled\t2026-02-12 04:38:07\t2026-02-12 04:38:25\tsuccess\t0\t0\tNULL\n1500005\tscheduled\t2026-02-11 09:15:08\t2026-02-11 09:15:21\tsuccess\t0\t0\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1640
+}

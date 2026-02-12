@@ -1,0 +1,14 @@
+{
+  "query": "SELECT COUNT(*) as total, MAX(createdAt) as latest_created FROM biddings;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT COUNT(*) as total, MAX(createdAt) as latest_created FROM biddings;",
+  "rows": [
+    {
+      "total": "230",
+      "latest_created": "2026-02-12 07:01:39"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tlatest_created\n230\t2026-02-12 07:01:39\n",
+  "stderr": "",
+  "execution_time_ms": 1574
+}
