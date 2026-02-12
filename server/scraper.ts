@@ -1,5 +1,7 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 import { generateTenderCanonicalId } from "./tenderIdentity.js";
+import fs from "node:fs";
+import { execSync } from "node:child_process";
 
 /**
  * 検索条件インターフェース
@@ -82,9 +84,50 @@ export class MieBiddingScraper {
   private readonly retryDelay = 5000; // 5秒
 
   /**
+   * Chromiumが存在するか確認し、なければインストール
+   */
+  private async ensureChrome(): Promise<void> {
+    console.log("[Scraper] Checking Chrome installation...");
+    console.log("[Scraper] cwd =", process.cwd());
+    console.log("[Scraper] uid =", process.getuid?.());
+    console.log("[Scraper] PUPPETEER_CACHE_DIR =", process.env.PUPPETEER_CACHE_DIR);
+    
+    const p = puppeteer.executablePath();
+    console.log("[Scraper] executablePath =", p);
+    console.log("[Scraper] exists =", fs.existsSync(p));
+    
+    if (fs.existsSync(p)) {
+      console.log("[Scraper] ✅ Chrome already exists");
+      return;
+    }
+    
+    console.log("[Scraper] ⚠️  Chrome not found. Installing...");
+    
+    try {
+      execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
+      
+      const p2 = puppeteer.executablePath();
+      console.log("[Scraper] After install executablePath =", p2);
+      console.log("[Scraper] After install exists =", fs.existsSync(p2));
+      
+      if (!fs.existsSync(p2)) {
+        throw new Error(`Chrome install failed. Expected at ${p2}`);
+      }
+      
+      console.log("[Scraper] ✅ Chrome installed successfully");
+    } catch (error) {
+      console.error("[Scraper] ❌ Error during Chrome installation:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Puppeteerブラウザを初期化
    */
   private async initBrowser(): Promise<void> {
+    // Chromiumの存在を確認（なければインストール）
+    await this.ensureChrome();
+    
     console.log("[Scraper] Initializing Puppeteer browser");
     
     // Puppeteerのデフォルトのexecutable pathを取得

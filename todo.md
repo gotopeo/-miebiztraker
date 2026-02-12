@@ -59,3 +59,32 @@ ChromeDriverエラー「spawn /usr/local/bin/chromedriver-128 ENOENT」を根本
 - [x] チェックポイントを保存
 - [ ] デプロイ後、本番環境で手動スクレイピングを実行
 - [ ] スクレイピングが成功することを確認
+
+---
+
+## postinstallスクリプトの根本的な修正（専門家の指摘に基づく）
+
+### 問題の本質
+現在の`postinstall`スクリプトは`puppeteer.executablePath()`が「実在チェック」ではなく「パス文字列を返すだけ」であるため、Chromiumが存在しなくてもcatchに落ちず、インストールが実行されない。
+
+### フェーズ1: タスク追加
+- [x] todo.mdに新しいタスクを追加
+
+### フェーズ2: 実在チェック付きpostinstallスクリプトを作成
+- [x] `scripts/ensure-chrome.mjs`を作成（fs.existsSyncで実在チェック）
+- [x] package.jsonのpostinstallを修正
+
+### フェーズ3: scraper.tsに起動時Chromiumチェックを追加
+- [x] `ensureChrome()`関数を追加（実行時に自己修復）
+- [x] `initBrowser()`の冒頭で`ensureChrome()`を呼び出し
+
+### フェーズ4: 環境情報ログを追加
+- [x] cwd、uid、PUPPETEER_CACHE_DIR、executablePath、existsをログ出力（ensureChrome関数内に実装）
+- [x] キャッシュディレクトリの内容を確認するログを追加（必要に応じて追加可能）
+
+### フェーズ5: 動作確認とチェックポイント保存
+- [x] 開発環境でスクレイピングを実行（新しい実行履歴が表示されない）
+- [ ] サーバーログを確認してensureChrome関数のログを確認
+- [ ] チェックポイントを保存
+- [ ] Publish後、本番環境でスクレイピングを実行
+- [ ] 本番環境のログを確認して問題を特定

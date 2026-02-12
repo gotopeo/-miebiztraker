@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "postinstall": "node -e \"import('puppeteer').then(p => p.default.executablePath()).catch(() => import('child_process').then(cp => cp.execSync('npx puppeteer browsers install chrome')))\""
+    "postinstall": "node scripts/ensure-chrome.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
