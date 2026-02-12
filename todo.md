@@ -183,6 +183,30 @@ Publish後も同じエラーが発生：`libglib-2.0.so.0: cannot open shared ob
 - [x] ローカルテストスクリプトでPlaywrightが正常に動作することを確認
 
 ### フェーズ6: チェックポイント保存と本番環境での確認
-- [ ] チェックポイントを保存
+- [x] チェックポイントを保存（d20d4879）
 - [ ] Publish後、本番環境でスクレイピングを実行
-- [ ] システムライブラリエラーが解消され、スクレイピングが成功することを確認
+- [ ] Playwrightが正常に動作し、スクレイピングが成功することを確認
+
+---
+
+## デプロイエラー修正（apt-get: not found）
+
+### 問題
+- `npx playwright install chromium --with-deps`が本番環境で失敗
+- `apt-get: not found` - パッケージマネージャーが利用できない
+- `--with-deps`フラグがシステムライブラリのインストールを試みるが、権限がない
+
+### 解決策
+- `--with-deps`フラグを削除して、Playwrightのブラウザバイナリのみをインストール
+- Playwrightのブラウザバイナリは自己完結型なので、システムライブラリなしでも動作するはず
+
+### フェーズ1: todo.mdにタスクを追加
+- [x] 問題を記録
+
+### フェーズ2: postinstallスクリプトから--with-depsを削除
+- [x] package.jsonのpostinstallを`npx playwright install chromium`に変更
+
+### フェーズ3: チェックポイント保存とデプロイ
+- [x] チェックポイントを保存
+- [ ] Publish後、デプロイが成功することを確認
+- [ ] 本番環境でスクレイピングを実行して動作確認
