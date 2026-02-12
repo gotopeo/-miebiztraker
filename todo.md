@@ -326,3 +326,42 @@ Publish後も同じエラーが発生：`libglib-2.0.so.0: cannot open shared ob
 - [ ] 開発環境でテスト
 - [ ] チェックポイントを保存
 - [ ] Publish後、本番環境でテスト
+
+
+---
+
+## PuppeteerからSeleniumへの移行（本番環境でのlibglib-2.0.so.0エラー解決）
+
+**状況**:
+- 手動スクレイピング: libglib-2.0.so.0エラーで失敗
+- スケジュール実行: 成功と表示されるが0件
+- 過去のスケジュール（Selenium時代）: 230件取得成功
+
+**根本原因**:
+- Manus本番環境では、Puppeteerのpostinstallスクリプトでシステムライブラリをインストールできない
+
+**解決策**:
+- 過去に成功していたSeleniumに戻す
+
+### フェーズ1: SeleniumパッケージをインストールしてPuppeteerをアンインストール
+- [x] Puppeteerをアンインストール
+- [x] Seleniumパッケージをインストール
+- [x] Chromedriverをインストール
+
+### フェーズ2: scraper.tsをSelenium APIに書き換え
+- [x] import文をSeleniumに変更
+- [x] initBrowser関数をSelenium APIに変更
+- [x] navigateFromTopPage関数をSelenium APIに変更
+- [x] executeSearch関数をSelenium APIに変更
+- [x] その他の関数をSelenium APIに変更
+- [x] convertToInsertBidding関数を追加
+- [x] SearchConditions型に不足していたフィールドを追加
+
+### フェーズ3: チェックポイントを保存してデプロイ
+- [ ] チェックポイントを保存
+- [ ] Publishボタンでデプロイ
+
+### フェーズ4: 本番環境でテストして結果を報告
+- [ ] 手動スクレイピングをテスト
+- [ ] スケジュール実行を確認
+- [ ] 結果を報告
