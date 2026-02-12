@@ -114,3 +114,75 @@ stderr: /usr/src/app/.cache/puppeteer/chrome/linux-145.0.7632.46/chrome-linux64/
 - [x] チェックポイントを保存
 - [ ] Publish後、本番環境でスクレイピングを実行
 - [ ] システムライブラリが正常にインストールされ、スクレイピングが成功することを確認
+
+
+---
+
+## --install-depsが機能しない問題の原因特定と代替手段
+
+### 状況
+Publish後も同じエラーが発生：`libglib-2.0.so.0: cannot open shared object file`
+`--install-deps`フラグが機能していない可能性が高い。
+
+### 推測される原因
+1. Manus本番環境でroot権限がなく、システムライブラリのインストールが失敗している
+2. `@puppeteer/browsers`パッケージの`--install-deps`がManusのコンテナ環境で動作しない
+3. postinstallスクリプトが本番環境で実行されていない、またはエラーを無視している
+
+### フェーズ1: タスク追加
+- [x] todo.mdに新しいタスクを追加
+
+### フェーズ2: デプロイログを確認して原因を特定
+- [ ] デプロイログ（ビルドログ）を確認してpostinstallが実行されたか確認
+- [ ] `--install-deps`が成功したか、フォールバックしたかを確認
+- [ ] エラーメッセージがあれば記録
+
+### フェーズ3: 代替手段を実装
+- [ ] オプション1: Playwrightに移行（システムライブラリが含まれたブラウザバイナリ）
+- [ ] オプション2: puppeteer-coreとchrome-aws-lambdaを使用（AWS Lambda用だがコンテナ環境でも動作する可能性）
+- [ ] オプション3: Dockerfileを作成してシステムライブラリを事前インストール（Manusがサポートしている場合）
+- [ ] オプション4: 外部スクレイピングAPIサービスを使用（ScrapingBee、Apifyなど）
+
+### フェーズ4: 動作確認とチェックポイント保存
+- [ ] 選択した代替手段を実装
+- [ ] 開発環境でテスト
+- [ ] チェックポイントを保存
+- [ ] Publish後、本番環境でスクレイピングが成功することを確認
+
+
+---
+
+## PuppeteerからPlaywrightへの移行
+
+### 移行理由
+- Puppeteerはシステムライブラリ（libglib-2.0.so.0など）への依存が強く、Manus本番環境でインストールできない
+- Playwrightは自己完結型ブラウザバイナリを提供し、コンテナ環境に最適化されている
+- PuppeteerとAPIが類似しているため、移行が比較的容易
+
+### フェーズ1: タスク追加
+- [x] todo.mdに新しいタスクを追加
+
+### フェーズ2: Playwrightをインストールし、Puppeteerを削除
+- [x] `pnpm add playwright`を実行
+- [x] `pnpm remove puppeteer`を実行
+
+### フェーズ3: scraper.tsをPlaywright APIに書き換え
+- [x] `import puppeteer from 'puppeteer'` → `import { chromium } from 'playwright'`
+- [x] `puppeteer.launch()` → `chromium.launch()`
+- [x] `page.setViewport()` → `page.setViewportSize()`
+- [x] `waitUntil: 'networkidle2'` → `waitUntil: 'networkidle'`
+- [x] `browser.once('targetcreated')` → `page.context().waitForEvent('page')`
+- [x] ensureChrome関数を削除（Playwrightは自動インストール）
+
+### フェーズ4: postinstallスクリプトをPlaywright用に修正
+- [x] package.jsonのpostinstallを`npx playwright install chromium --with-deps`に変更
+- [x] 開発環境でChromiumをインストール
+
+### フェーズ5: 開発環境でテスト
+- [x] サーバーを再起動
+- [x] ローカルテストスクリプトでPlaywrightが正常に動作することを確認
+
+### フェーズ6: チェックポイント保存と本番環境での確認
+- [ ] チェックポイントを保存
+- [ ] Publish後、本番環境でスクレイピングを実行
+- [ ] システムライブラリエラーが解消され、スクレイピングが成功することを確認

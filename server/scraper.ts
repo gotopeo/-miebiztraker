@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import { chromium, Browser, Page } from "playwright";
 import { generateTenderCanonicalId } from "./tenderIdentity.js";
 import fs from "node:fs";
 import { execSync } from "node:child_process";
@@ -84,82 +84,25 @@ export class MieBiddingScraper {
   private readonly retryDelay = 5000; // 5秒
 
   /**
-   * Chromiumが存在するか確認し、なければインストール
-   */
-  private async ensureChrome(): Promise<void> {
-    console.log("[Scraper] Checking Chrome installation...");
-    console.log("[Scraper] cwd =", process.cwd());
-    console.log("[Scraper] uid =", process.getuid?.());
-    console.log("[Scraper] PUPPETEER_CACHE_DIR =", process.env.PUPPETEER_CACHE_DIR);
-    
-    const p = puppeteer.executablePath();
-    console.log("[Scraper] executablePath =", p);
-    console.log("[Scraper] exists =", fs.existsSync(p));
-    
-    if (fs.existsSync(p)) {
-      console.log("[Scraper] ✅ Chrome already exists");
-      return;
-    }
-    
-    console.log("[Scraper] ⚠️  Chrome not found. Installing...");
-    
-    try {
-      console.log("[Scraper] Installing Chrome with dependencies...");
-      
-      try {
-        // まず --install-deps を試す（root権限が必要）
-        execSync("npx @puppeteer/browsers install chrome@stable --install-deps", { stdio: "inherit" });
-        console.log("[Scraper] Chrome and system dependencies installed");
-      } catch (depsError) {
-        console.warn("[Scraper] ⚠️  Failed to install with --install-deps. Trying without...");
-        execSync("npx puppeteer browsers install chrome", { stdio: "inherit" });
-        console.log("[Scraper] Chrome installed (system dependencies may need manual installation)");
-      }
-      
-      const p2 = puppeteer.executablePath();
-      console.log("[Scraper] After install executablePath =", p2);
-      console.log("[Scraper] After install exists =", fs.existsSync(p2));
-      
-      if (!fs.existsSync(p2)) {
-        throw new Error(`Chrome install failed. Expected at ${p2}`);
-      }
-      
-      console.log("[Scraper] ✅ Chrome installed successfully");
-    } catch (error) {
-      console.error("[Scraper] ❌ Error during Chrome installation:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Puppeteerブラウザを初期化
+   * Playwrightブラウザを初期化
    */
   private async initBrowser(): Promise<void> {
-    // Chromiumの存在を確認（なければインストール）
-    await this.ensureChrome();
+    console.log("[Scraper] Initializing Playwright browser");
     
-    console.log("[Scraper] Initializing Puppeteer browser");
-    
-    // Puppeteerのデフォルトのexecutable pathを取得
-    const executablePath = puppeteer.executablePath();
-    console.log("[Scraper] Using Chrome at:", executablePath);
-    
-    this.browser = await puppeteer.launch({
+    this.browser = await chromium.launch({
       headless: true,
-      executablePath,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        "--window-size=1920,1080",
       ],
     });
 
     this.page = await this.browser.newPage();
-    await this.page.setViewport({ width: 1920, height: 1080 });
+    await this.page.setViewportSize({ width: 1920, height: 1080 });
     
-    console.log("[Scraper] Puppeteer browser initialized");
+    console.log("[Scraper] Playwright browser initialized");
   }
 
   /**
@@ -169,7 +112,7 @@ export class MieBiddingScraper {
     if (!this.page) throw new Error("Page not initialized");
 
     console.log("[Scraper] Navigating from TOP page");
-    await this.page.goto(this.topPageUrl, { waitUntil: "networkidle2" });
+    await this.page.goto(this.topPageUrl, { waitUntil: "networkidle" });
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     try {
@@ -179,12 +122,7 @@ export class MieBiddingScraper {
       
       // 新しいページが開くのを待機
       const [newPage] = await Promise.all([
-        new Promise<Page>((resolve) => {
-          this.browser!.once("targetcreated", async (target) => {
-            const page = await target.page();
-            if (page) resolve(page);
-          });
-        }),
+        this.page.context().waitForEvent("page"),
         this.page.click(buttonSelector),
       ]);
 
@@ -194,7 +132,7 @@ export class MieBiddingScraper {
       console.log("[Scraper] Successfully navigated to bidding page");
     } catch (error) {
       console.warn("[Scraper] Failed to navigate from TOP page, accessing directly");
-      await this.page.goto(this.baseUrl, { waitUntil: "networkidle2" });
+      await this.page.goto(this.baseUrl, { waitUntil: "networkidle" });
       await this.page.waitForSelector("#searchBtn", { timeout: 15000 });
     }
   }
@@ -408,7 +346,7 @@ export class MieBiddingScraper {
       
       // 新しいページで詳細を開く
       const detailPage = await this.browser!.newPage();
-      await detailPage.goto(item.detailUrl, { waitUntil: "networkidle2" });
+      await detailPage.goto(item.detailUrl, { waitUntil: "networkidle" });
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // 詳細情報を抽出（実装は省略、必要に応じて追加）
