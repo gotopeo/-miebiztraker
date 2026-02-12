@@ -232,7 +232,9 @@ export const appRouter = router({
   // スクレイピング関連API
   scraping: router({
     // 手動スクレイピング実行（最新公告情報）
-    execute: protectedProcedure.mutation(async ({ ctx }) => {
+    execute: protectedProcedure
+      .meta({ timeout: 300000 }) // 5分のタイムアウト
+      .mutation(async ({ ctx }) => {
       const startedAt = new Date();
 
       // ログ作成

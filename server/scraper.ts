@@ -414,7 +414,7 @@ export class MieBiddingScraper {
           } else {
             break;
           }
-        } while (pageCount < 10); // 最大10ページまで
+        } while (pageCount < 20); // 最大20ページまで（171件すべてを取得するため）
         
         console.log(`[Scraper] Successfully scraped ${allItems.length} items from ${pageCount} pages`);
         

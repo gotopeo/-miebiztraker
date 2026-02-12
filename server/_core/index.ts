@@ -66,6 +66,11 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // HTTPタイムアウトを延長（スクレイピングのため）
+  server.timeout = 300000; // 5分
+  server.keepAliveTimeout = 310000; // 5分10秒
+  server.headersTimeout = 320000; // 5分20秒
+  
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
     
