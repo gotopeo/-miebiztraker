@@ -131,8 +131,8 @@ importers:
         specifier: ^1.12.0
         version: 1.12.2
       chromedriver:
-        specifier: ^145.0.1
-        version: 145.0.1
+        specifier: 128.0.0
+        version: 128.0.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2839,9 +2839,9 @@ packages:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
 
-  chromedriver@145.0.1:
-    resolution: {integrity: sha512-v1OnzdHz8u7fyEX9t7hm5gR5zfEO4vkdt1OVvttLvo40dh0KKImDp8iyQxCFeEayHp5VATtG+hcSvsF4lZSSXw==}
-    engines: {node: '>=20'}
+  chromedriver@128.0.0:
+    resolution: {integrity: sha512-Ggo21z/dFQxTOTgU0vm0V59Mi79yyR+9AUk/KiVAsRfbDRdVZQYQWfgxnIvD/x8KOKn0oB7haRzDO/KfrKyvOA==}
+    engines: {node: '>=18'}
     hasBin: true
 
   class-variance-authority@0.7.1:
@@ -8208,7 +8208,7 @@ snapshots:
 
   chownr@3.0.0: {}
 
-  chromedriver@145.0.1:
+  chromedriver@128.0.0:
     dependencies:
       '@testim/chrome-version': 1.1.4
       axios: 1.12.2

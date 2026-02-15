@@ -1,0 +1,190 @@
+{
+  "query": "SELECT id, executionType, status, itemsScraped, newItems, errorMessage, createdAt FROM scrapingLogs WHERE createdAt >= '2026-02-15 12:00:00' ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, executionType, status, itemsScraped, newItems, errorMessage, createdAt FROM scrapingLogs WHERE createdAt >= '2026-02-15 12:00:00' ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "1890025",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:33:12"
+    },
+    {
+      "id": "1890022",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890023",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890020",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890024",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890021",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890019",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:49"
+    },
+    {
+      "id": "1890013",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890018",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890016",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890012",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890014",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890015",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890017",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:48"
+    },
+    {
+      "id": "1890011",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:47"
+    },
+    {
+      "id": "1890010",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:47"
+    },
+    {
+      "id": "1890008",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:44"
+    },
+    {
+      "id": "1890005",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:44"
+    },
+    {
+      "id": "1890004",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:44"
+    },
+    {
+      "id": "1890009",
+      "executionType": "scheduled",
+      "status": "success",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL",
+      "createdAt": "2026-02-15 12:24:44"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texecutionType\tstatus\titemsScraped\tnewItems\terrorMessage\tcreatedAt\n1890025\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:33:12\n1890022\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890023\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890020\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890024\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890021\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890019\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:49\n1890013\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890018\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890016\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890012\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890014\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890015\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890017\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:48\n1890011\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:47\n1890010\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:47\n1890008\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:44\n1890005\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:44\n1890004\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:44\n1890009\tscheduled\tsuccess\t0\t0\tNULL\t2026-02-15 12:24:44\n",
+  "stderr": "",
+  "execution_time_ms": 1526
+}

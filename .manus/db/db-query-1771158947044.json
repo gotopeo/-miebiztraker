@@ -1,0 +1,24 @@
+{
+  "query": "\nSELECT \n  executionType,\n  status,\n  COUNT(*) as count,\n  SUM(itemsScraped) as total_items,\n  SUM(newItems) as total_new_items\nFROM scrapingLogs \nWHERE createdAt >= '2026-02-15 12:00:00'\nGROUP BY executionType, status\nORDER BY executionType, status;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute \nSELECT \n  executionType,\n  status,\n  COUNT(*) as count,\n  SUM(itemsScraped) as total_items,\n  SUM(newItems) as total_new_items\nFROM scrapingLogs \nWHERE createdAt >= '2026-02-15 12:00:00'\nGROUP BY executionType, status\nORDER BY executionType, status;\n",
+  "rows": [
+    {
+      "executionType": "manual",
+      "status": "running",
+      "count": "1",
+      "total_items": "0",
+      "total_new_items": "0"
+    },
+    {
+      "executionType": "scheduled",
+      "status": "success",
+      "count": "24",
+      "total_items": "0",
+      "total_new_items": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "executionType\tstatus\tcount\ttotal_items\ttotal_new_items\nmanual\trunning\t1\t0\t0\nscheduled\tsuccess\t24\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1553
+}
