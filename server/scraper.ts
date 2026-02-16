@@ -123,30 +123,17 @@ export class MieBiddingScraper {
   }
 
   /**
-   * トップページから検索ページに遷移
+   * 検索ページに直接アクセス
    */
-  private async navigateFromTopPage(): Promise<void> {
+  private async navigateToSearchPage(): Promise<void> {
     if (!this.driver) throw new Error("Driver not initialized");
 
-    console.log(`[Scraper] Navigating to top page: ${this.topPageUrl}`);
-    await this.driver.get(this.topPageUrl);
-
-    // 「入札情報サービスシステム（公共調達）」リンクをクリック
-    console.log("[Scraper] Looking for public procurement link");
-    
-    await this.driver.wait(until.elementLocated(By.linkText("入札情報サービスシステム（公共調達）")), 10000);
-    const link = await this.driver.findElement(By.linkText("入札情報サービスシステム（公共調達）"));
-    await link.click();
-
-    // ウィンドウハンドルを切り替え
-    const handles = await this.driver.getAllWindowHandles();
-    if (handles.length > 1) {
-      await this.driver.switchTo().window(handles[1]);
-    }
+    console.log(`[Scraper] Navigating to search page: ${this.baseUrl}`);
+    await this.driver.get(this.baseUrl);
 
     // ページが読み込まれるまで待機
     await this.driver.wait(until.elementLocated(By.css("table")), 10000);
-    console.log("[Scraper] Navigated to search page");
+    console.log("[Scraper] Successfully loaded search page");
   }
 
   /**
@@ -334,7 +321,7 @@ export class MieBiddingScraper {
         console.log(`[Scraper] Attempt ${attempt}/${this.maxRetries}`);
         
         await this.initBrowser();
-        await this.navigateFromTopPage();
+        await this.navigateToSearchPage();
         
         // 検索条件を設定
         if (!conditions.useLatestAnnouncement) {

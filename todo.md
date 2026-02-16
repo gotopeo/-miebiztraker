@@ -448,5 +448,32 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] 修正案を実装（ChromeDriverを128にダウングレード）
 
 ### フェーズ4: 確認結果をユーザーに報告
-- [ ] 確認結果をまとめる
-- [ ] 本番環境での動作状況を報告
+- [x] 確認結果をまとめる
+- [x] 本番環境での動作状況を報告
+
+
+---
+
+## 本番環境でのService Unavailableエラーの解決
+
+### 問題
+手動スクレイピング実行時に「Unexpected token 'S', "Service Unavailable" is not valid JSON」エラーが発生。
+
+### フェーズ1: 本番環境のログとエラー状況を調査
+- [x] 本番環境のスクレイピングログを確認
+- [x] サーバーログを確認
+- [x] エラーの詳細を特定（TimeoutError: 存在しないリンクを探している）
+
+### フェーズ2: Service Unavailableエラーの原因を特定
+- [x] タイムアウトの可能性を確認
+- [x] 三重県サイトの構造変更を確認
+- [x] 原因特定：「入札情報サービスシステム（公共調達）」リンクが存在しない
+
+### フェーズ3: 修正案を実装してテスト
+- [x] 原因に応じた修正を実装（navigateFromTopPageをnavigateToSearchPageに変更）
+- [x] ローカル環境でテスト
+- [ ] チェックポイントを保存
+
+### フェーズ4: 修正内容をユーザーに報告
+- [ ] 修正内容をまとめる
+- [ ] 本番環境での動作確認手順を案内
