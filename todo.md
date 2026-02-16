@@ -470,9 +470,9 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] 原因特定：「入札情報サービスシステム（公共調達）」リンクが存在しない
 
 ### フェーズ3: 修正案を実装してテスト
-- [x] 原因に応じた修正を実装（navigateFromTopPageをnavigateToSearchPageに変更）
+- [x] 原因に応じた修正を実装（画像リンクをクリックするように変更）
 - [x] ローカル環境でテスト
-- [ ] チェックポイントを保存
+- [x] チェックポイントを保存
 
 ### フェーズ4: 修正内容をユーザーに報告
 - [ ] 修正内容をまとめる

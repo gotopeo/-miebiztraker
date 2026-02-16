@@ -123,17 +123,31 @@ export class MieBiddingScraper {
   }
 
   /**
-   * 検索ページに直接アクセス
+   * トップページから検索ページに遷移
    */
   private async navigateToSearchPage(): Promise<void> {
     if (!this.driver) throw new Error("Driver not initialized");
 
-    console.log(`[Scraper] Navigating to search page: ${this.baseUrl}`);
-    await this.driver.get(this.baseUrl);
+    console.log(`[Scraper] Navigating to top page: ${this.topPageUrl}`);
+    await this.driver.get(this.topPageUrl);
+
+    // 「入札情報(工事・委託）」画像リンクをクリック
+    console.log("[Scraper] Looking for bidding information link");
+    
+    await this.driver.wait(until.elementLocated(By.css('img[alt*="入札情報"]')), 10000);
+    const imgElement = await this.driver.findElement(By.css('img[alt*="入札情報"]'));
+    const linkElement = await imgElement.findElement(By.xpath('..'));
+    await linkElement.click();
+
+    // ウィンドウハンドルを切り替え
+    const handles = await this.driver.getAllWindowHandles();
+    if (handles.length > 1) {
+      await this.driver.switchTo().window(handles[1]);
+    }
 
     // ページが読み込まれるまで待機
     await this.driver.wait(until.elementLocated(By.css("table")), 10000);
-    console.log("[Scraper] Successfully loaded search page");
+    console.log("[Scraper] Successfully navigated to search page");
   }
 
   /**
