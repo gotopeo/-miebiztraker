@@ -134,19 +134,27 @@ export class MieBiddingScraper {
     // 「入札情報(工事・委託）」画像リンクをクリック
     console.log("[Scraper] Looking for bidding information link");
     
-    await this.driver.wait(until.elementLocated(By.css('img[alt*="入札情報"]')), 10000);
-    const imgElement = await this.driver.findElement(By.css('img[alt*="入札情報"]'));
-    const linkElement = await imgElement.findElement(By.xpath('..'));
-    await linkElement.click();
+    // 要素が表示されるまで待機
+    await this.driver.wait(until.elementLocated(By.css('a[href*="mie.efftis.jp"]')), 15000);
+    const linkElement = await this.driver.findElement(By.css('a[href*="mie.efftis.jp"]'));
+    
+    // 要素が表示されるまで待機
+    await this.driver.wait(until.elementIsVisible(linkElement), 15000);
+    
+    // JavaScriptで強制的にクリック
+    await this.driver.executeScript("arguments[0].click();", linkElement);
+    console.log("[Scraper] Clicked bidding information link");
 
     // ウィンドウハンドルを切り替え
+    await this.driver.sleep(2000); // 新しいウィンドウが開くまで待機
     const handles = await this.driver.getAllWindowHandles();
     if (handles.length > 1) {
       await this.driver.switchTo().window(handles[1]);
+      console.log("[Scraper] Switched to new window");
     }
 
     // ページが読み込まれるまで待機
-    await this.driver.wait(until.elementLocated(By.css("table")), 10000);
+    await this.driver.wait(until.elementLocated(By.css("table")), 15000);
     console.log("[Scraper] Successfully navigated to search page");
   }
 
