@@ -406,7 +406,25 @@ export async function scrapeMieBiddings(
   fetchDetails: boolean = false
 ): Promise<ScrapingResult> {
   const scraper = new MieBiddingScraper();
-  return await scraper.scrape(conditions, fetchDetails);
+  
+  // 5分のタイムアウトを設定
+  const timeout = 5 * 60 * 1000; // 5分
+  const timeoutPromise = new Promise<ScrapingResult>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Scraping timeout: Process exceeded 5 minutes'));
+    }, timeout);
+  });
+  
+  try {
+    return await Promise.race([
+      scraper.scrape(conditions, fetchDetails),
+      timeoutPromise
+    ]);
+  } catch (error) {
+    // タイムアウトまたはエラーの場合、ブラウザをクローズ
+    await scraper['closeBrowser']();
+    throw error;
+  }
 }
 
 /**

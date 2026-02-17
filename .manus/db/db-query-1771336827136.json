@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE scrapingLogs\nSET status = 'failed', errorMessage = 'Timeout: Process did not complete within expected time'\nWHERE status = 'running' \nAND TIMESTAMPDIFF(MINUTE, createdAt, NOW()) > 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute \nUPDATE scrapingLogs\nSET status = 'failed', errorMessage = 'Timeout: Process did not complete within expected time'\nWHERE status = 'running' \nAND TIMESTAMPDIFF(MINUTE, createdAt, NOW()) > 10;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1552
+}
