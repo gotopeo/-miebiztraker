@@ -407,11 +407,11 @@ export async function scrapeMieBiddings(
 ): Promise<ScrapingResult> {
   const scraper = new MieBiddingScraper();
   
-  // 5分のタイムアウトを設定
-  const timeout = 5 * 60 * 1000; // 5分
+  // 1分のタイムアウトを設定
+  const timeout = 1 * 60 * 1000; // 1分
   const timeoutPromise = new Promise<ScrapingResult>((_, reject) => {
     setTimeout(() => {
-      reject(new Error('Scraping timeout: Process exceeded 5 minutes'));
+      reject(new Error('Scraping timeout: Process exceeded 1 minute'));
     }, timeout);
   });
   

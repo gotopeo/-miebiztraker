@@ -233,7 +233,7 @@ export const appRouter = router({
   scraping: router({
     // 手動スクレイピング実行（最新公告情報）
     execute: protectedProcedure
-      .meta({ timeout: 300000 }) // 5分のタイムアウト
+      .meta({ timeout: 60000 }) // 1分のタイムアウト
       .mutation(async ({ ctx }) => {
       const startedAt = new Date();
 

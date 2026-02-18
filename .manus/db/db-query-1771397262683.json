@@ -1,0 +1,65 @@
+{
+  "query": "SELECT id, userId, executionType, status, startedAt, finishedAt, itemsScraped, newItems, errorMessage \nFROM scrapingLogs \nORDER BY startedAt DESC \nLIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, userId, executionType, status, startedAt, finishedAt, itemsScraped, newItems, errorMessage \nFROM scrapingLogs \nORDER BY startedAt DESC \nLIMIT 5;",
+  "rows": [
+    {
+      "id": "2010002",
+      "userId": "NULL",
+      "executionType": "scheduled",
+      "status": "success",
+      "startedAt": "2026-02-18 06:45:32",
+      "finishedAt": "2026-02-18 06:45:55",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "2010001",
+      "userId": "1",
+      "executionType": "manual",
+      "status": "running",
+      "startedAt": "2026-02-18 06:44:10",
+      "finishedAt": "NULL",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1980001",
+      "userId": "NULL",
+      "executionType": "scheduled",
+      "status": "success",
+      "startedAt": "2026-02-18 00:00:00",
+      "finishedAt": "2026-02-18 00:01:22",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1950006",
+      "userId": "1",
+      "executionType": "manual",
+      "status": "running",
+      "startedAt": "2026-02-17 14:05:31",
+      "finishedAt": "NULL",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    },
+    {
+      "id": "1950005",
+      "userId": "1",
+      "executionType": "manual",
+      "status": "running",
+      "startedAt": "2026-02-17 13:58:09",
+      "finishedAt": "NULL",
+      "itemsScraped": "0",
+      "newItems": "0",
+      "errorMessage": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\texecutionType\tstatus\tstartedAt\tfinishedAt\titemsScraped\tnewItems\terrorMessage\n2010002\tNULL\tscheduled\tsuccess\t2026-02-18 06:45:32\t2026-02-18 06:45:55\t0\t0\tNULL\n2010001\t1\tmanual\trunning\t2026-02-18 06:44:10\tNULL\t0\t0\tNULL\n1980001\tNULL\tscheduled\tsuccess\t2026-02-18 00:00:00\t2026-02-18 00:01:22\t0\t0\tNULL\n1950006\t1\tmanual\trunning\t2026-02-17 14:05:31\tNULL\t0\t0\tNULL\n1950005\t1\tmanual\trunning\t2026-02-17 13:58:09\tNULL\t0\t0\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1559
+}
