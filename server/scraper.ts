@@ -2,55 +2,11 @@ import { Builder, By, until, WebDriver, WebElement } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 
 /**
- * 検索条件
+ * 検索条件（最新公告情報のみ）
  */
 export interface SearchConditions {
-  /** 発注区分 */
-  orderType?: string;
-  /** 入札方式 */
-  biddingMethod?: string;
-  /** 区分（工事/委託） */
-  category?: "工事" | "委託";
-  /** 種別 */
-  types?: string[];
-  /** 格付 */
-  ratings?: string[];
-  /** 本庁/地域機関/その他 */
-  agencies?: string[];
-  /** 部局 */
-  departments?: string[];
-  /** 所属 */
-  affiliations?: string[];
-  /** 履行場所 */
-  location?: string;
-  /** 公開日（From） */
-  publicDateFrom?: Date;
-  /** 公開日（To） */
-  publicDateTo?: Date;
-  /** 更新日（From） */
-  updateDateFrom?: Date;
-  /** 更新日（To） */
-  updateDateTo?: Date;
-  /** 予定価格（From） */
-  budgetFrom?: number;
-  /** 予定価格（To） */
-  budgetTo?: number;
-  /** 件名文字列 */
-  title?: string;
-  /** 施工番号 */
-  constructionNo?: string;
-  /** 最新公告情報を取得（true の場合、他の条件を無視） */
-  useLatestAnnouncement?: boolean;
-  /** 工事種別 */
-  projectType?: string[];
-  /** 件名キーワード */
-  titleKeyword?: string;
-  /** 予定価格（最小） */
-  estimatedPriceMin?: number;
-  /** 予定価格（最大） */
-  estimatedPriceMax?: number;
-  /** 格付（単一値） */
-  rating?: string[];
+  /** 最新公告情報を取得（常にtrue） */
+  useLatestAnnouncement: boolean;
 }
 
 /**
@@ -158,38 +114,17 @@ export class MieBiddingScraper {
     console.log("[Scraper] Successfully navigated to search page");
   }
 
-  /**
-   * 検索条件を設定
-   */
-  private async setSearchConditions(conditions: SearchConditions): Promise<void> {
-    if (!this.driver) throw new Error("Driver not initialized");
 
-    console.log("[Scraper] Setting search conditions");
-
-    // 各条件を設定（実装は省略、必要に応じて追加）
-    if (conditions.title) {
-      const titleInput = await this.driver.findElement(By.name("titleSearch"));
-      await titleInput.sendKeys(conditions.title);
-    }
-
-    console.log("[Scraper] Search conditions set");
-  }
 
   /**
-   * 検索を実行
+   * 最新公告情報を検索実行
    */
-  private async executeSearch(useLatest: boolean = true): Promise<void> {
+  private async executeSearch(): Promise<void> {
     if (!this.driver) throw new Error("Driver not initialized");
 
-    if (useLatest) {
-      // 最新公告情報ボタンを実行
-      console.log("[Scraper] Executing latest announcement search");
-      await this.driver.executeScript("LinkSubmit('P004', '4', 'searchBtn');");
-    } else {
-      // 通常の検索実行
-      console.log("[Scraper] Executing normal search");
-      await this.driver.executeScript("LinkSubmit('P004', '2', 'searchBtn');");
-    }
+    // 最新公告情報ボタンを実行
+    console.log("[Scraper] Executing latest announcement search");
+    await this.driver.executeScript("LinkSubmit('P004', '4', 'searchBtn');");
 
     // ページ遷移を待機
     await this.driver.sleep(10000);
@@ -345,13 +280,8 @@ export class MieBiddingScraper {
         await this.initBrowser();
         await this.navigateToSearchPage();
         
-        // 検索条件を設定
-        if (!conditions.useLatestAnnouncement) {
-          await this.setSearchConditions(conditions);
-        }
-        
-        // 検索実行
-        await this.executeSearch(conditions.useLatestAnnouncement ?? true);
+        // 最新公告情報を検索実行
+        await this.executeSearch();
         
         // 結果テーブルを探す
         const hasTable = await this.findResultTable();
