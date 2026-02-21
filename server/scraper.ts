@@ -87,12 +87,12 @@ export class MieBiddingScraper {
     console.log(`[Scraper] Navigating to top page: ${this.topPageUrl}`);
     await this.driver.get(this.topPageUrl);
 
-    // 「入札情報(工事・委託）」画像リンクをクリック
+    // 「入札情報（工事・委託）」画像リンクをクリック
     console.log("[Scraper] Looking for bidding information link");
     
-    // 要素が表示されるまで待機
-    await this.driver.wait(until.elementLocated(By.css('a[href*="mie.efftis.jp"]')), 15000);
-    const linkElement = await this.driver.findElement(By.css('a[href*="mie.efftis.jp"]'));
+    // 正しい入札情報ページのリンクを探す（/ppi/pubを含む）
+    await this.driver.wait(until.elementLocated(By.css('a[href*="/ppi/pub"]')), 15000);
+    const linkElement = await this.driver.findElement(By.css('a[href*="/ppi/pub"]'));
     
     // 要素が表示されるまで待機
     await this.driver.wait(until.elementIsVisible(linkElement), 15000);
@@ -122,13 +122,31 @@ export class MieBiddingScraper {
   private async executeSearch(): Promise<void> {
     if (!this.driver) throw new Error("Driver not initialized");
 
-    // 最新公告情報ボタンを実行
     console.log("[Scraper] Executing latest announcement search");
-    await this.driver.executeScript("LinkSubmit('P004', '4', 'searchBtn');");
-
-    // ページ遷移を待機
-    await this.driver.sleep(10000);
-    console.log("[Scraper] Search executed and page loaded");
+    
+    try {
+      // 「最新公告情報」リンクを探す
+      const latestLink = await this.driver.wait(
+        until.elementLocated(By.linkText("最新公告情報")),
+        10000
+      );
+      
+      console.log("[Scraper] Found latest announcement link");
+      
+      // リンクが表示されるまで待機
+      await this.driver.wait(until.elementIsVisible(latestLink), 5000);
+      
+      // リンクをクリック
+      await latestLink.click();
+      console.log("[Scraper] Clicked latest announcement link");
+      
+      // ページ遷移を待機
+      await this.driver.sleep(5000);
+      console.log("[Scraper] Search executed and page loaded");
+    } catch (error) {
+      console.error("[Scraper] Failed to click latest announcement link:", error);
+      throw error;
+    }
   }
 
   /**
