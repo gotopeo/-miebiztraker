@@ -715,5 +715,30 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] 一般ユーザー用の画面（Landing）を/publicに移動
 
 ### フェーズ2: チェックポイントを保存してデプロイ
+- [x] チェックポイントを保存
+- [ ] Publishボタンでデプロイ
+
+
+---
+
+## chromiumパッケージをインストールして本番環境でSeleniumを動作させる
+
+### 目的
+本番環境でSelenium/ChromeDriverが動作しない問題を解決するため、chromiumパッケージをインストールする
+
+### フェーズ1: chromiumパッケージをインストール
+- [x] `@sparticuz/chromium`パッケージをインストール（軽量版Chromium）
+- [x] package.jsonの依存関係を確認
+
+### フェーズ2: scraper.tsを修正してchromiumのパスを指定
+- [x] Chromiumのバイナリパスを取得する処理を追加
+- [x] ChromeOptionsでChromiumのパスを指定
+
+### フェーズ3: 開発環境でテスト
+- [ ] 開発環境でスクレイピングをテスト実行
+- [ ] エラーがないことを確認
+
+### フェーズ4: チェックポイントを保存して本番環境にデプロイ
 - [ ] チェックポイントを保存
 - [ ] Publishボタンでデプロイ
+- [ ] 本番環境で手動スクレイピングをテスト

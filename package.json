@@ -44,6 +44,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@sparticuz/chromium-min": "^143.0.4",
     "@tanstack/react-query": "^5.90.2",
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
@@ -51,7 +52,6 @@
     "@types/node-schedule": "^2.1.8",
     "@types/selenium-webdriver": "^4.35.5",
     "axios": "^1.12.0",
-    "chromedriver": "128.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -83,6 +83,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "webdriver-manager": "^12.1.9",
     "wouter": "^3.3.5",
     "zod": "^4.1.12"
   },
@@ -120,7 +121,6 @@
       "tailwindcss>nanoid": "3.3.7"
     },
     "onlyBuiltDependencies": [
-      "chromedriver",
       "puppeteer"
     ]
   }

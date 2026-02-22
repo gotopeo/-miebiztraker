@@ -1,5 +1,11 @@
-import { Builder, By, until, WebDriver, WebElement } from "selenium-webdriver";
+import { Builder, By, until, WebDriver } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
+import chromium from "@sparticuz/chromium-min";
+import { exec } from "child_process";
+import { promisify } from "util";
+import path from "path";
+
+const execAsync = promisify(exec);
 
 /**
  * 検索条件（最新公告情報のみ）
@@ -47,21 +53,69 @@ export class MieBiddingScraper {
   private readonly retryDelay = 5000; // 5秒
 
   /**
+   * Selenium Managerを使用してChromeDriverのパスを取得
+   */
+  private async getChromeDriverPath(chromiumPath: string): Promise<string> {
+    const seleniumManagerPath = path.join(
+      process.cwd(),
+      'node_modules',
+      'selenium-webdriver',
+      'bin',
+      'linux',
+      'selenium-manager'
+    );
+
+    const command = `${seleniumManagerPath} --browser chrome --browser-path ${chromiumPath} --skip-driver-in-path --output JSON`;
+
+    try {
+      console.log('[Scraper] Running Selenium Manager to get ChromeDriver...');
+      const { stdout } = await execAsync(command);
+      const result = JSON.parse(stdout);
+      
+      if (result.result.code === 0) {
+        console.log(`[Scraper] ChromeDriver path: ${result.result.driver_path}`);
+        return result.result.driver_path;
+      } else {
+        throw new Error(`Selenium Manager failed: ${result.result.message}`);
+      }
+    } catch (error) {
+      console.error('[Scraper] Failed to get ChromeDriver path:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Seleniumブラウザを初期化
    */
   private async initBrowser(): Promise<void> {
     console.log("[Scraper] Initializing Selenium WebDriver");
     
     const options = new chrome.Options();
-    options.addArguments("--headless");
+    
+    // @sparticuz/chromiumのパスを設定
+    const chromiumPath = await chromium.executablePath();
+    console.log(`[Scraper] Using Chromium at: ${chromiumPath}`);
+    options.setChromeBinaryPath(chromiumPath);
+    
+    // Chromiumの推奨引数を追加
+    const chromiumArgs = chromium.args;
+    chromiumArgs.forEach(arg => options.addArguments(arg));
+    
+    // 追加の引数
+    options.addArguments("--headless=new");
     options.addArguments("--no-sandbox");
     options.addArguments("--disable-dev-shm-usage");
     options.addArguments("--disable-gpu");
     options.addArguments("--window-size=1920,1080");
 
+    // Selenium Managerを使用してChromeDriverのパスを取得
+    const chromedriverPath = await this.getChromeDriverPath(chromiumPath);
+    const service = new chrome.ServiceBuilder(chromedriverPath);
+
     this.driver = await new Builder()
       .forBrowser("chrome")
       .setChromeOptions(options)
+      .setChromeService(service)
       .build();
 
     console.log("[Scraper] Selenium WebDriver initialized");
