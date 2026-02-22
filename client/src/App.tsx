@@ -20,7 +20,9 @@ import UserDetail from "./pages/UserDetail";
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Landing} />
+      {/* 管理者画面をトップページに設定 */}
+      <Route path={"/"} component={Home} />
+      <Route path={"/public"} component={Landing} />
       <Route path={"/liff-success"} component={LiffSuccess} />
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin/users/:userId"} component={UserDetail} />
