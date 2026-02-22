@@ -1,10 +1,11 @@
 /**
  * DB肥大化対策クリーンアップジョブ
  * 新ロジック仕様：方式A（TTL削除 + 件数上限削除）
+ * + タイムアウトしたスクレイピングログのクリーンアップ
  */
 import { getDb } from "./db.js";
-import { biddings } from "../drizzle/schema.js";
-import { lt, sql, asc } from "drizzle-orm";
+import { biddings, scrapingLogs } from "../drizzle/schema.js";
+import { lt, sql, asc, eq, and } from "drizzle-orm";
 
 // 保持期間（日数）
 const RETENTION_DAYS = 180;
@@ -31,6 +32,9 @@ export async function runCleanupJob(): Promise<void> {
 
     // 件数上限削除（保険）
     await countLimitDeletion(db);
+
+    // タイムアウトしたスクレイピングログのクリーンアップ
+    await cleanupStuckScrapingLogs(db);
 
     console.log("[Cleanup Job] Database cleanup completed successfully");
   } catch (error) {
@@ -103,4 +107,36 @@ async function countLimitDeletion(db: any): Promise<void> {
   }
 
   console.log(`[Cleanup Job] Count limit deletion: removed ${deletedTotal} biddings`);
+}
+
+/**
+ * タイムアウトしたスクレイピングログのクリーンアップ
+ * 10分以上「実行中」のままのログを「失敗」に更新
+ */
+async function cleanupStuckScrapingLogs(db: any): Promise<void> {
+  console.log("[Cleanup Job] Cleaning up stuck scraping logs...");
+
+  const tenMinutesAgo = new Date();
+  tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+
+  try {
+    const result = await db
+      .update(scrapingLogs)
+      .set({
+        status: "failed",
+        errorMessage: "Process terminated or timeout (automatically cleaned up)",
+        finishedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(scrapingLogs.status, "running"),
+          lt(scrapingLogs.startedAt, tenMinutesAgo)
+        )
+      );
+
+    const updatedCount = result.affectedRows || 0;
+    console.log(`[Cleanup Job] Cleaned up ${updatedCount} stuck scraping logs`);
+  } catch (error) {
+    console.error("[Cleanup Job] Error cleaning up stuck scraping logs:", error);
+  }
 }

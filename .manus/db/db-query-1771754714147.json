@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, startedAt, executionType, status, TIMESTAMPDIFF(MINUTE, startedAt, NOW()) as minutesElapsed\nFROM scrapingLogs \nWHERE status = 'running' \nORDER BY startedAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, startedAt, executionType, status, TIMESTAMPDIFF(MINUTE, startedAt, NOW()) as minutesElapsed\nFROM scrapingLogs \nWHERE status = 'running' \nORDER BY startedAt DESC;",
+  "rows": [
+    {
+      "id": "2130005",
+      "startedAt": "2026-02-22 10:03:35",
+      "executionType": "manual",
+      "status": "running",
+      "minutesElapsed": "1"
+    },
+    {
+      "id": "2130004",
+      "startedAt": "2026-02-22 10:00:41",
+      "executionType": "manual",
+      "status": "running",
+      "minutesElapsed": "4"
+    },
+    {
+      "id": "2130001",
+      "startedAt": "2026-02-22 09:43:38",
+      "executionType": "manual",
+      "status": "running",
+      "minutesElapsed": "21"
+    },
+    {
+      "id": "2040007",
+      "startedAt": "2026-02-20 09:00:00",
+      "executionType": "manual",
+      "status": "running",
+      "minutesElapsed": "2945"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstartedAt\texecutionType\tstatus\tminutesElapsed\n2130005\t2026-02-22 10:03:35\tmanual\trunning\t1\n2130004\t2026-02-22 10:00:41\tmanual\trunning\t4\n2130001\t2026-02-22 09:43:38\tmanual\trunning\t21\n2040007\t2026-02-20 09:00:00\tmanual\trunning\t2945\n",
+  "stderr": "",
+  "execution_time_ms": 1577
+}
