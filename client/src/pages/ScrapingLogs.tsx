@@ -25,12 +25,16 @@ export default function ScrapingLogs() {
   const executeMutation = trpc.scraping.execute.useMutation({
     onSuccess: (result) => {
       if (result.success) {
-        toast.success(
-          `スクレイピング完了: ${result.newItems}件の新規案件を取得しました`
-        );
-        refetch();
-      } else {
-        toast.error(`スクレイピング失敗: ${result.error}`);
+        toast.success(result.message || "スクレイピングを開始しました。実行履歴で結果を確認できます。");
+        // ポーリングで実行履歴を更新（5秒ごとに10回）
+        let pollCount = 0;
+        const pollInterval = setInterval(() => {
+          refetch();
+          pollCount++;
+          if (pollCount >= 10) {
+            clearInterval(pollInterval);
+          }
+        }, 5000);
       }
     },
     onError: (error) => {

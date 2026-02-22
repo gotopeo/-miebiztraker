@@ -231,9 +231,8 @@ export const appRouter = router({
 
   // スクレイピング関連API
   scraping: router({
-    // 手動スクレイピング実行（最新公告情報）
+    // 手動スクレイピング実行（最新公告情報） - 非同期処理
     execute: protectedProcedure
-      .meta({ timeout: 60000 }) // 1分のタイムアウト
       .mutation(async ({ ctx }) => {
       const startedAt = new Date();
 
@@ -245,53 +244,50 @@ export const appRouter = router({
         status: "running",
       });
 
-      try {
-        // スクレイピング実行
-        const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false);
+      // バックグラウンドでスクレイピングを実行（awaitを使わない）
+      (async () => {
+        try {
+          // スクレイピング実行
+          const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false);
 
-        if (!result.success) {
-          // 失敗
+          if (!result.success) {
+            // 失敗
+            await updateScrapingLog(logId, {
+              finishedAt: new Date(),
+              status: "failed",
+              errorMessage: result.errorMessage,
+            });
+            return;
+          }
+
+          // データベースに保存（新規判定あり）
+          const convertedItems = result.items.map(convertToInsertBidding);
+          const { newBiddings, updatedBiddings } = await detectNewBiddings(convertedItems);
+
+          // ログ更新
+          await updateScrapingLog(logId, {
+            finishedAt: new Date(),
+            status: "success",
+            itemsScraped: result.totalCount,
+            newItems: newBiddings.length,
+          });
+        } catch (error) {
+          // 予期しないエラー
           await updateScrapingLog(logId, {
             finishedAt: new Date(),
             status: "failed",
-            errorMessage: result.errorMessage,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorDetails: error instanceof Error ? error.stack : undefined,
           });
-
-          return {
-            success: false,
-            error: result.errorMessage,
-          };
         }
+      })(); // 即座に実行
 
-        // データベースに保存（新規判定あり）
-        const convertedItems = result.items.map(convertToInsertBidding);
-        const { newBiddings, updatedBiddings } = await detectNewBiddings(convertedItems);
-
-        // ログ更新
-        await updateScrapingLog(logId, {
-          finishedAt: new Date(),
-          status: "success",
-          itemsScraped: result.totalCount,
-          newItems: newBiddings.length,
-        });
-
-        return {
-          success: true,
-          itemsScraped: result.totalCount,
-          newItems: newBiddings.length,
-          updatedItems: updatedBiddings.length,
-        };
-      } catch (error) {
-        // 予期しないエラー
-        await updateScrapingLog(logId, {
-          finishedAt: new Date(),
-          status: "failed",
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorDetails: error instanceof Error ? error.stack : undefined,
-        });
-
-        throw error;
-      }
+      // すぐにレスポンスを返す
+      return {
+        success: true,
+        message: "スクレイピングを開始しました。実行履歴で結果を確認できます。",
+        logId,
+      };
     }),
 
 
