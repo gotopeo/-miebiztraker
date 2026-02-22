@@ -305,7 +305,7 @@ export class MieBiddingScraper {
   /**
    * ページネーションを処理
    */
-  private async handlePagination(maxPages: number = 20): Promise<BiddingInfo[]> {
+  private async handlePagination(maxPages: number = 30): Promise<BiddingInfo[]> {
     if (!this.driver) throw new Error("Driver not initialized");
 
     const allItems: BiddingInfo[] = [];
@@ -367,8 +367,8 @@ export class MieBiddingScraper {
           };
         }
 
-        // ページネーションを処理してデータを取得
-        const items = await this.handlePagination(20);
+        // ページネーションを処理してデータを取得（最大30ページ = 約300件）
+        const items = await this.handlePagination(30);
 
         await this.closeBrowser();
 
