@@ -319,7 +319,7 @@ export class MieBiddingScraper {
 
       // 次ページボタンを探す
       try {
-        const nextButton = await this.driver.findElement(By.linkText("次へ"));
+        const nextButton = await this.driver.findElement(By.linkText("次ページ"));
         const isEnabled = await nextButton.isEnabled();
 
         if (!isEnabled) {
