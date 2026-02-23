@@ -804,3 +804,4 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [ ] Publishボタンでデプロイ
 - [x] スクレイパーの取得件数上限を300件から400件に変更
 - [x] スクレイピングのタイムアウトエラーを修正
+- [x] データベース更新時のエラーを修正

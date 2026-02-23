@@ -431,14 +431,18 @@ export async function scrapeMieBiddings(
 
 /**
  * tenderCanonicalIdを生成
+ * 注: titleが長い場合は最初の50文字のみ使用して255文字制限を超えないようにする
  */
 function generateTenderCanonicalId(bidding: any): string {
-  const parts = [
-    bidding.caseNumber || "",
-    bidding.title || "",
-    bidding.orderOrganName || "",
-  ];
-  return parts.filter(Boolean).join("_");
+  const caseNumber = bidding.caseNumber || "";
+  const title = (bidding.title || "").substring(0, 50); // 最初の50文字のみ
+  const organName = (bidding.orderOrganName || "").substring(0, 50); // 最初の50文字のみ
+  
+  const parts = [caseNumber, title, organName];
+  const canonicalId = parts.filter(Boolean).join("_");
+  
+  // 255文字を超える場合は切り詰め
+  return canonicalId.substring(0, 255);
 }
 
 /**
