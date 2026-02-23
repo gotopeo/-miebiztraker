@@ -1,6 +1,6 @@
 import { Builder, By, until, WebDriver } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
-import chromium from "@sparticuz/chromium-min";
+import chromium from "@sparticuz/chromium";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
