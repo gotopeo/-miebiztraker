@@ -802,3 +802,4 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 ### フェーズ5: チェックポイントを作成してユーザーに報告
 - [ ] チェックポイントを保存
 - [ ] Publishボタンでデプロイ
+- [x] スクレイパーの取得件数上限を300件から400件に変更

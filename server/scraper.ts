@@ -305,7 +305,7 @@ export class MieBiddingScraper {
   /**
    * ページネーションを処理
    */
-  private async handlePagination(maxPages: number = 30): Promise<BiddingInfo[]> {
+  private async handlePagination(maxPages: number = 40): Promise<BiddingInfo[]> {
     if (!this.driver) throw new Error("Driver not initialized");
 
     const allItems: BiddingInfo[] = [];
