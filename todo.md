@@ -807,3 +807,6 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] データベース更新時のエラーを修正
 - [x] 本番環境でのChromiumバイナリパスエラーを修正
 - [x] @sparticuz/chromium-minのバイナリファイルが見つからない問題を根本的に解決
+- [ ] Manusを起動していなくても自動的にスクレイピングと通知が実行される仕組みを実装
+- [ ] LINE通知がManusを起動していないと送信されない問題を調査して修正
+- [x] 通知設定の発注機関の選択肢を23機関に変更
