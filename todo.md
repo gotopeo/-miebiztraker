@@ -810,3 +810,4 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [ ] Manusを起動していなくても自動的にスクレイピングと通知が実行される仕組みを実装
 - [ ] LINE通知がManusを起動していないと送信されない問題を調査して修正
 - [x] 通知設定の発注機関の選択肢を23機関に変更
+- [x] スクレイピングスケジュールの「最終実行」が「未実行」と表示される問題を修正

@@ -322,6 +322,14 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
     } catch (logError) {
       console.error('[Scheduler] Failed to insert scraping log:', logError);
     }
+    
+    // スケジュール設定のlastExecutedAtを更新
+    try {
+      await updateScheduleSetting(scheduleId, { lastExecutedAt: new Date() });
+      console.log(`[Scheduler] Updated lastExecutedAt for schedule ID: ${scheduleId}`);
+    } catch (updateError) {
+      console.error('[Scheduler] Failed to update lastExecutedAt:', updateError);
+    }
   }
 }
 
