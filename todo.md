@@ -811,3 +811,66 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [ ] LINE通知がManusを起動していないと送信されない問題を調査して修正
 - [x] 通知設定の発注機関の選択肢を23機関に変更
 - [x] スクレイピングスケジュールの「最終実行」が「未実行」と表示される問題を修正
+- [ ] カスタムドメインmbt.gripeに対応したLINE Messaging API設定を変更
+
+---
+
+## カスタムドメイン（mbt.gripe）移行に伴うLINE Messaging API設定変更
+
+### 背景
+カスタムドメイン（mbt.gripe）を取得したため、LINE Messaging APIの設定をデフォルトドメインからカスタムドメインに変更する必要がある。
+
+### フェーズ1: ユーザー動線の調査
+- [ ] リッチメニューからLINE連携、通知設定、通知受信までのユーザー動線を調査
+- [ ] LIFF Endpoint URLとリッチメニューの設定を特定
+- [ ] カスタムドメイン移行に必要な変更箇所をリストアップ
+
+### フェーズ2: LINE Developers Consoleでの設定変更
+- [ ] Webhook URLを`https://mbt.gripe/api/line/webhook`に変更
+- [ ] LIFF Endpoint URLを変更（リッチメニューからの動線に応じて）
+- [ ] リッチメニューのURLを変更（必要に応じて）
+
+### フェーズ3: アプリケーション側の確認
+- [ ] 環境変数やリダイレクトURLを確認
+- [ ] 必要に応じてコードを修正
+
+### フェーズ4: テストと確認
+- [ ] LINE連携が正常に動作することを確認
+- [ ] メッセージ送信が正常に動作することを確認
+- [ ] チェックポイントを作成
+
+---
+
+## 新規スケジュールが起動しない問題の調査
+
+### 問題
+- 過去のスケジュール: 正常に起動している
+- 新規に設定したスケジュール: 起動しない
+
+### フェーズ1: データベースから設定を取得して比較
+- [ ] notification_schedulesテーブルから過去のスケジュールを取得
+- [ ] notification_schedulesテーブルから新規スケジュールを取得
+- [ ] 設定の違いを比較（isActive, executionTimes, createdAt等）
+
+### フェーズ2: scheduler.tsのコードを確認
+- [ ] initializeScheduler関数を確認
+- [ ] スケジュール登録ロジックを確認
+- [ ] node-scheduleの登録条件を確認
+
+### フェーズ3: 原因を特定
+- [ ] 違いを特定
+- [ ] 原因を特定
+
+### フェーズ4: 修正案を実装してテスト
+- [ ] 修正案を実装
+- [ ] 開発環境でテスト
+- [ ] チェックポイントを保存
+
+
+---
+
+## スケジューラーバグ修正（全スケジュールが確実に実行されるように）
+
+- [x] db.tsのinsertScheduleSettingが新規IDを返すように修正
+- [x] routers.tsのスケジュール作成mutationをIDベースで修正（schedules[0]バグ修正）
+- [x] scheduler.tsのinitializeSchedulerで全スケジュールを確実に登録する修正

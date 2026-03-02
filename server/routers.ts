@@ -369,12 +369,14 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        await insertScheduleSetting(input);
+        // DBに保存して新規IDを取得
+        const newId = await insertScheduleSetting(input);
         
         // スケジューラーに登録（enabled=trueの場合）
-        if (input.enabled) {
+        if (input.enabled && newId) {
           const schedules = await getScheduleSettings();
-          const newSchedule = schedules[0]; // 最新のスケジュール
+          // IDで正確に新規スケジュールを取得
+          const newSchedule = schedules.find(s => s.id === newId);
           if (newSchedule) {
             await updateSchedule({
               id: newSchedule.id,
@@ -385,6 +387,9 @@ export const appRouter = router({
               cronExpression: newSchedule.cronExpression,
               enabled: newSchedule.enabled,
             });
+            console.log(`[Router] Registered new schedule to scheduler: ID=${newId}, name=${newSchedule.name}`);
+          } else {
+            console.error(`[Router] Failed to find new schedule with ID=${newId} after insert`);
           }
         }
         

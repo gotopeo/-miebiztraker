@@ -493,11 +493,14 @@ export async function getActiveSchedules(): Promise<ScheduleSetting[]> {
 /**
  * スケジュール設定を挿入
  */
-export async function insertScheduleSetting(setting: InsertScheduleSetting): Promise<void> {
+export async function insertScheduleSetting(setting: InsertScheduleSetting): Promise<number | null> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return null;
 
-  await db.insert(scheduleSettings).values(setting);
+  const result = await db.insert(scheduleSettings).values(setting);
+  // MySQLはinsertId、SQLiteはlastInsertRowidを返す
+  const insertId = (result as any).insertId ?? (result as any).lastInsertRowid ?? null;
+  return insertId ? Number(insertId) : null;
 }
 
 /**

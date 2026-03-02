@@ -26,20 +26,26 @@ export async function initializeScheduler() {
     if (!schedules || schedules.length === 0) {
       console.log('[Scheduler] No active schedules found. Creating default schedule (daily at 9:00 AM)...');
       await createDefaultSchedule();
-      return;
+    } else {
+      // 全スケジュールを登録（awaitで確実に完了させる）
+      for (const scheduleConfig of schedules) {
+        await registerSchedule(scheduleConfig);
+      }
+      console.log(`[Scheduler] Initialized with ${schedules.length} active schedule(s)`);
     }
-    
-    for (const scheduleConfig of schedules) {
-      registerSchedule(scheduleConfig);
-    }
-    
-    console.log(`[Scheduler] Initialized with ${schedules.length} active schedule(s)`);
     
     // 通知ジョブのスケジュールを登録
     await initializeNotificationSchedules();
     
     // クリーンアップジョブのスケジュールを登録（毎日03:00 JST）
     initializeCleanupSchedule();
+    
+    // 登録済みスケジュールの一覧をログ出力
+    console.log(`[Scheduler] Active jobs in memory: ${activeJobs.size}`);
+    activeJobs.forEach((job, id) => {
+      const next = job.nextInvocation();
+      console.log(`[Scheduler]   - ID=${id}, next=${next?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+    });
   } catch (error) {
     console.error('[Scheduler] Failed to initialize:', error);
   }
