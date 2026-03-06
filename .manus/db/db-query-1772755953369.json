@@ -1,0 +1,46 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "biddings"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "issuers"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "keywordWatches"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "lineConnections"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "lineVerificationCodes"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "notificationLogs"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "notificationSubscriptions"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "scheduleSettings"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "scrapingLogs"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "searchHistory"
+    },
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_NY6jPB2PH8byUzFWqjpfhf\n__drizzle_migrations\nbiddings\nissuers\nkeywordWatches\nlineConnections\nlineVerificationCodes\nnotificationLogs\nnotificationSubscriptions\nscheduleSettings\nscrapingLogs\nsearchHistory\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1515
+}

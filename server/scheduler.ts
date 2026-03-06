@@ -13,6 +13,38 @@ import { runCleanupJob } from './cleanupJob';
 // アクティブなスケジュールジョブを管理
 const activeJobs = new Map<number, schedule.Job>();
 
+// ========== 排他制御: スクレイピングキュー ==========
+// Seleniumは同時に複数起動できないため、キュー式で順番に実行する
+let isScrapingRunning = false;
+const scrapingQueue: Array<{ scheduleId: number; scheduleName: string }> = [];
+
+async function enqueueScrapingJob(scheduleId: number, scheduleName: string) {
+  scrapingQueue.push({ scheduleId, scheduleName });
+  console.log(`[Scheduler] Queued scraping job: ${scheduleName} (queue size: ${scrapingQueue.length})`);
+  await processScrapingQueue();
+}
+
+async function processScrapingQueue() {
+  if (isScrapingRunning) {
+    console.log('[Scheduler] Scraping already running, job will wait in queue');
+    return;
+  }
+  if (scrapingQueue.length === 0) return;
+
+  isScrapingRunning = true;
+  while (scrapingQueue.length > 0) {
+    const job = scrapingQueue.shift()!;
+    console.log(`[Scheduler] Starting queued job: ${job.scheduleName} (remaining: ${scrapingQueue.length})`);
+    try {
+      await executeScheduledScraping(job.scheduleId, job.scheduleName);
+    } catch (err) {
+      console.error(`[Scheduler] Queued job failed: ${job.scheduleName}`, err);
+    }
+  }
+  isScrapingRunning = false;
+}
+// ====================================================
+
 /**
  * スケジューラーを初期化し、データベースからスケジュール設定を読み込んで登録
  */
@@ -249,9 +281,10 @@ async function registerSchedule(scheduleConfig: {
       tz: 'Etc/UTC'
     };
     
+    // ★ キュー経由で実行することで、同時起動を防ぐ
     const job = schedule.scheduleJob(spec, async () => {
       console.log(`[Scheduler] Executing scheduled scraping: ${scheduleConfig.name}`);
-      await executeScheduledScraping(scheduleConfig.id, scheduleConfig.name);
+      await enqueueScrapingJob(scheduleConfig.id, scheduleConfig.name);
     });
     
     if (job) {
@@ -261,7 +294,6 @@ async function registerSchedule(scheduleConfig: {
       console.log(`[Scheduler] Next execution: ${nextExec?.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
       
       // 次回実行時刻をデータベースに保存（非同期）
-      // nextExecはUTCタイムスタンプなので、そのまま保存
       if (nextExec) {
         updateScheduleSetting(scheduleConfig.id, { nextExecutionAt: nextExec }).catch(err => {
           console.error('[Scheduler] Failed to update nextExecutionAt:', err);

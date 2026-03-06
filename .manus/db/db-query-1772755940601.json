@@ -1,0 +1,13 @@
+{
+  "query": "SHOW TABLES LIKE '%schedule%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SHOW TABLES LIKE '%schedule%';",
+  "rows": [
+    {
+      "Tables_in_NY6jPB2PH8byUzFWqjpfhf (%schedule%)": "scheduleSettings"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_NY6jPB2PH8byUzFWqjpfhf (%schedule%)\nscheduleSettings\n",
+  "stderr": "",
+  "execution_time_ms": 2324
+}

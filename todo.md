@@ -874,3 +874,8 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] db.tsのinsertScheduleSettingが新規IDを返すように修正
 - [x] routers.tsのスケジュール作成mutationをIDベースで修正（schedules[0]バグ修正）
 - [x] scheduler.tsのinitializeSchedulerで全スケジュールを確実に登録する修正
+
+## スケジューラー排他制御修正（同時起動によるSeleniumタイムアウト防止）
+
+- [x] スクレイピング実行の排他制御（キュー式）を実装
+- [x] サーバー起動時の過去スケジュール一斉実行を防止（node-scheduleの仕様により起動後の次回実行時刻から正常動作）

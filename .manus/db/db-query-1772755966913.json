@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, name, scheduleType, executionTime, enabled FROM scheduleSettings ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, name, scheduleType, executionTime, enabled FROM scheduleSettings ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "毎日９時更新",
+      "scheduleType": "daily",
+      "executionTime": "09:00",
+      "enabled": "1"
+    },
+    {
+      "id": "2",
+      "name": "毎日12時更新",
+      "scheduleType": "daily",
+      "executionTime": "12:00",
+      "enabled": "1"
+    },
+    {
+      "id": "4",
+      "name": "毎日16時更新",
+      "scheduleType": "daily",
+      "executionTime": "16:00",
+      "enabled": "1"
+    },
+    {
+      "id": "270001",
+      "name": "毎日7時更新",
+      "scheduleType": "daily",
+      "executionTime": "07:00",
+      "enabled": "1"
+    },
+    {
+      "id": "300001",
+      "name": "毎日18時更新",
+      "scheduleType": "daily",
+      "executionTime": "18:00",
+      "enabled": "1"
+    },
+    {
+      "id": "360001",
+      "name": "てすと",
+      "scheduleType": "daily",
+      "executionTime": "04:19",
+      "enabled": "1"
+    },
+    {
+      "id": "390001",
+      "name": "毎日8時更新",
+      "scheduleType": "daily",
+      "executionTime": "08:10",
+      "enabled": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tscheduleType\texecutionTime\tenabled\n1\t毎日９時更新\tdaily\t09:00\t1\n2\t毎日12時更新\tdaily\t12:00\t1\n4\t毎日16時更新\tdaily\t16:00\t1\n270001\t毎日7時更新\tdaily\t07:00\t1\n300001\t毎日18時更新\tdaily\t18:00\t1\n360001\tてすと\tdaily\t04:19\t1\n390001\t毎日8時更新\tdaily\t08:10\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1548
+}

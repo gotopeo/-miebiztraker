@@ -1,0 +1,130 @@
+{
+  "query": "SELECT id, executionType, status, startedAt FROM scrapingLogs ORDER BY startedAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3uDLYjDbp6rUVuo.05399e1d7c2a --database NY6jPB2PH8byUzFWqjpfhf --execute SELECT id, executionType, status, startedAt FROM scrapingLogs ORDER BY startedAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "2940007",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940001",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940009",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940025",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940010",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940020",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940011",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940028",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940008",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940012",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940006",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940002",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940003",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940024",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940005",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:59"
+    },
+    {
+      "id": "2940021",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:57"
+    },
+    {
+      "id": "2940004",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:57"
+    },
+    {
+      "id": "2940016",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:57"
+    },
+    {
+      "id": "2940019",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:57"
+    },
+    {
+      "id": "2940013",
+      "executionType": "scheduled",
+      "status": "failed",
+      "startedAt": "2026-03-05 23:50:57"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texecutionType\tstatus\tstartedAt\n2940007\tscheduled\tfailed\t2026-03-05 23:50:59\n2940001\tscheduled\tfailed\t2026-03-05 23:50:59\n2940009\tscheduled\tfailed\t2026-03-05 23:50:59\n2940025\tscheduled\tfailed\t2026-03-05 23:50:59\n2940010\tscheduled\tfailed\t2026-03-05 23:50:59\n2940020\tscheduled\tfailed\t2026-03-05 23:50:59\n2940011\tscheduled\tfailed\t2026-03-05 23:50:59\n2940028\tscheduled\tfailed\t2026-03-05 23:50:59\n2940008\tscheduled\tfailed\t2026-03-05 23:50:59\n2940012\tscheduled\tfailed\t2026-03-05 23:50:59\n2940006\tscheduled\tfailed\t2026-03-05 23:50:59\n2940002\tscheduled\tfailed\t2026-03-05 23:50:59\n2940003\tscheduled\tfailed\t2026-03-05 23:50:59\n2940024\tscheduled\tfailed\t2026-03-05 23:50:59\n2940005\tscheduled\tfailed\t2026-03-05 23:50:59\n2940021\tscheduled\tfailed\t2026-03-05 23:50:57\n2940004\tscheduled\tfailed\t2026-03-05 23:50:57\n2940016\tscheduled\tfailed\t2026-03-05 23:50:57\n2940019\tscheduled\tfailed\t2026-03-05 23:50:57\n2940013\tscheduled\tfailed\t2026-03-05 23:50:57\n",
+  "stderr": "",
+  "execution_time_ms": 1617
+}
