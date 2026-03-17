@@ -879,3 +879,12 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 
 - [x] スクレイピング実行の排他制御（キュー式）を実装
 - [x] サーバー起動時の過去スケジュール一斉実行を防止（node-scheduleの仕様により起動後の次回実行時刻から正常動作）
+
+---
+
+## tenderCanonicalId数値変換バグ修正
+
+- [x] tenderIdentity.tsのnormalizeStringに数値対応を追加（String()で明示変換）
+- [x] generateTenderCanonicalIdでcaseNumber/orderOrganCodeをString()で明示変換
+- [x] scraper.tsの独膪generateTenderCanonicalIdを削除しtenderIdentity.tsの共通関数に統一
+- [ ] scraper.tsのfinallyブロックでスクレイピングログを必ずfailed/completedに更新

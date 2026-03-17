@@ -4,6 +4,7 @@ import chromium from "@sparticuz/chromium";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
+import { generateTenderCanonicalId as generateCanonicalId } from "./tenderIdentity.js";
 
 const execAsync = promisify(exec);
 
@@ -429,21 +430,7 @@ export async function scrapeMieBiddings(
   }
 }
 
-/**
- * tenderCanonicalIdを生成
- * 注: titleが長い場合は最初の50文字のみ使用して255文字制限を超えないようにする
- */
-function generateTenderCanonicalId(bidding: any): string {
-  const caseNumber = bidding.caseNumber || "";
-  const title = (bidding.title || "").substring(0, 50); // 最初の50文字のみ
-  const organName = (bidding.orderOrganName || "").substring(0, 50); // 最初の50文字のみ
-  
-  const parts = [caseNumber, title, organName];
-  const canonicalId = parts.filter(Boolean).join("_");
-  
-  // 255文字を超える場合は切り詰め
-  return canonicalId.substring(0, 255);
-}
+// generateTenderCanonicalIdはtenderIdentity.tsの関数を使用（定義を削除して共通化）
 
 /**
  * BiddingInfoをデータベース挿入用の形式に変換
@@ -470,8 +457,15 @@ export function convertToInsertBidding(item: BiddingInfo): any {
     rawData: JSON.stringify(item),
   };
   
-  // tenderCanonicalIdを生成
-  bidding.tenderCanonicalId = generateTenderCanonicalId(bidding);
+  // tenderCanonicalIdを生成（tenderIdentity.tsの共通関数を使用）
+  // caseNumberが数値の場合に備えてString()で明示変換
+  bidding.tenderCanonicalId = generateCanonicalId({
+    caseNumber: String(bidding.caseNumber || ""),
+    orderOrganCode: bidding.orderOrganCode ? String(bidding.orderOrganCode) : undefined,
+    orderOrganName: bidding.orderOrganName,
+    title: bidding.title,
+    detailUrl: bidding.detailUrl,
+  });
   
   return bidding;
 }

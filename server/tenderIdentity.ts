@@ -7,10 +7,12 @@ import { Bidding } from "../drizzle/schema";
 /**
  * 文字列を正規化（全角半角統一、空白統一、大小文字統一）
  */
-export function normalizeString(str: string): string {
-  if (!str) return "";
+export function normalizeString(str: string | number | null | undefined): string {
+  if (str === null || str === undefined || str === "") return "";
+  // 数値が渡された場合は文字列に変換
+  const strValue = String(str);
   
-  return str
+  return strValue
     // 全角英数字を半角に変換
     .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
     // 全角スペースを半角に変換
@@ -35,12 +37,15 @@ export function normalizeString(str: string): string {
 export function generateTenderCanonicalId(bidding: Partial<Bidding>): string {
   // 案件番号が存在する場合
   if (bidding.caseNumber) {
+    // 必ずString()で文字列に変換してからnormalizeStringに渡す
+    const caseNumberStr = String(bidding.caseNumber);
     // 発注機関コードがある場合は組み合わせて一意性を保証
     if (bidding.orderOrganCode) {
-      return `${normalizeString(bidding.orderOrganCode)}-${normalizeString(bidding.caseNumber)}`;
+      const organCodeStr = String(bidding.orderOrganCode);
+      return `${normalizeString(organCodeStr)}-${normalizeString(caseNumberStr)}`;
     }
     // 案件番号のみの場合
-    return normalizeString(bidding.caseNumber);
+    return normalizeString(caseNumberStr);
   }
 
   // 案件番号が取得できない場合（エラーケース）
