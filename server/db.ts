@@ -841,3 +841,18 @@ export async function getIssuersByIds(ids: number[]): Promise<Issuer[]> {
     .from(issuers)
     .where(sql`${issuers.id} IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`);
 }
+
+/**
+ * DBに存在する全tenderCanonicalIdをSetで取得（差分取得モード用）
+ */
+export async function getAllTenderCanonicalIds(): Promise<Set<string>> {
+  const db = await getDb();
+  if (!db) return new Set();
+
+  const results = await db
+    .select({ tenderCanonicalId: biddings.tenderCanonicalId })
+    .from(biddings)
+    .where(sql`${biddings.tenderCanonicalId} IS NOT NULL`);
+
+  return new Set(results.map(r => r.tenderCanonicalId).filter(Boolean) as string[]);
+}

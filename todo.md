@@ -888,3 +888,12 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] generateTenderCanonicalIdでcaseNumber/orderOrganCodeをString()で明示変換
 - [x] scraper.tsの独膪generateTenderCanonicalIdを削除しtenderIdentity.tsの共通関数に統一
 - [ ] scraper.tsのfinallyブロックでスクレイピングログを必ずfailed/completedに更新
+
+---
+
+## スクレイピング高速化（改修案1+2）
+
+- [x] 改修案1: scraper.tsの固定sleep（5秒・3秒）を動的待機に変更（until.stalenessOf + until.elementLocated）
+- [x] 改修案2: handlePaginationに差分取得ロジックを実装（既存案件が5件連続したら停止）
+- [x] db.tsにgetAllTenderCanonicalIds関数を追加
+- [x] scheduler.tsに差分取得モードを適用

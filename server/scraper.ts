@@ -156,8 +156,11 @@ export class MieBiddingScraper {
     await this.driver.executeScript("arguments[0].click();", linkElement);
     console.log("[Scraper] Clicked bidding information link");
 
-    // ウィンドウハンドルを切り替え
-    await this.driver.sleep(2000); // 新しいウィンドウが開くまで待機
+    // ウィンドウハンドルを切り替え（新ウィンドウが開くまで動的に待機）
+    await this.driver.wait(async () => {
+      const handles = await this.driver!.getAllWindowHandles();
+      return handles.length > 1;
+    }, 10000, "新しいウィンドウが開くのを待機中");
     const handles = await this.driver.getAllWindowHandles();
     if (handles.length > 1) {
       await this.driver.switchTo().window(handles[1]);
@@ -195,8 +198,12 @@ export class MieBiddingScraper {
       await latestLink.click();
       console.log("[Scraper] Clicked latest announcement link");
       
-      // ページ遷移を待機
-      await this.driver.sleep(5000);
+      // ページ遷移を動的に待機（テーブルが現れるまで待つ、最大15秒）
+      await this.driver.wait(
+        until.elementLocated(By.css("table tr")),
+        15000,
+        "検索結果テーブルの読み込みを待機中"
+      );
       console.log("[Scraper] Search executed and page loaded");
     } catch (error) {
       console.error("[Scraper] Failed to click latest announcement link:", error);
@@ -304,19 +311,62 @@ export class MieBiddingScraper {
   }
 
   /**
-   * ページネーションを処理
+   * ページネーションを処理（差分取得対応）
+   * existingCanonicalIds: DBに既に存在するtenderCanonicalIdのセット
+   *   - 指定した場合、既存案件が連続して出現したらスクレイピングを停止する（差分取得モード）
+   *   - 指定しない場合、全ページを取得する（フルスキャンモード）
    */
-  private async handlePagination(maxPages: number = 40): Promise<BiddingInfo[]> {
+  private async handlePagination(
+    maxPages: number = 40,
+    existingCanonicalIds?: Set<string>
+  ): Promise<BiddingInfo[]> {
     if (!this.driver) throw new Error("Driver not initialized");
 
     const allItems: BiddingInfo[] = [];
     let currentPage = 1;
+    // 差分取得モード: 既存案件が何件連続したら停止するか
+    const CONSECUTIVE_EXISTING_THRESHOLD = 5;
 
     while (currentPage <= maxPages) {
       console.log(`[Scraper] Processing page ${currentPage}`);
 
       const items = await this.extractTableData();
-      allItems.push(...items);
+
+      if (existingCanonicalIds) {
+        // 差分取得モード: 既存案件が連続して出現したら停止
+        let consecutiveExisting = 0;
+        for (const item of items) {
+          const canonicalId = generateCanonicalId({
+            caseNumber: String(item.constructionNo || ""),
+            orderOrganName: item.agency,
+            title: item.title,
+            detailUrl: item.detailUrl,
+          });
+          if (existingCanonicalIds.has(canonicalId)) {
+            consecutiveExisting++;
+            if (consecutiveExisting >= CONSECUTIVE_EXISTING_THRESHOLD) {
+              console.log(`[Scraper] ${CONSECUTIVE_EXISTING_THRESHOLD}件連続で既存案件を検出 → 差分取得完了（page ${currentPage}）`);
+              allItems.push(...items.slice(0, items.indexOf(item) - CONSECUTIVE_EXISTING_THRESHOLD + 1));
+              return allItems;
+            }
+          } else {
+            consecutiveExisting = 0; // 新着案件が出たらリセット
+            allItems.push(item);
+          }
+        }
+        // このページは全て新着 or 既存が閾値未満 → 全件追加
+        if (consecutiveExisting < CONSECUTIVE_EXISTING_THRESHOLD) {
+          // items全体をallItemsに追加（上のループで追加済みのものは除く）
+          const alreadyAdded = allItems.slice(allItems.length - items.length);
+          if (alreadyAdded.length < items.length) {
+            // まだ追加されていない分を追加
+            allItems.push(...items.slice(alreadyAdded.length));
+          }
+        }
+      } else {
+        // フルスキャンモード: 全件追加
+        allItems.push(...items);
+      }
 
       // 次ページボタンを探す
       try {
@@ -328,8 +378,24 @@ export class MieBiddingScraper {
           break;
         }
 
+        // 現在のテーブルを記録して、次ページ読み込み後に古いテーブルが消えたことを確認
+        const currentTable = await this.driver.findElement(By.css("table"));
         await nextButton.click();
-        await this.driver.sleep(3000);
+
+        // 古いテーブルが消えるまで待機（動的待機）
+        try {
+          await this.driver.wait(until.stalenessOf(currentTable), 8000);
+        } catch {
+          // stalenessOfが失敗した場合は短いsleepにフォールバック
+          await this.driver.sleep(1000);
+        }
+        // 新しいテーブルが現れるまで待機
+        await this.driver.wait(
+          until.elementLocated(By.css("table tr")),
+          10000,
+          "次ページのテーブル読み込みを待機中"
+        );
+
         currentPage++;
       } catch (error) {
         console.log("[Scraper] No next page button found");
@@ -342,8 +408,9 @@ export class MieBiddingScraper {
 
   /**
    * スクレイピングを実行（リトライ機能付き）
+   * existingCanonicalIds: 差分取得モード用に、DBに既存するtenderCanonicalIdのセットを渡す
    */
-  async scrape(conditions: SearchConditions, fetchDetails: boolean = false): Promise<ScrapingResult> {
+  async scrape(conditions: SearchConditions, fetchDetails: boolean = false, existingCanonicalIds?: Set<string>): Promise<ScrapingResult> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
@@ -368,8 +435,9 @@ export class MieBiddingScraper {
           };
         }
 
-        // ページネーションを処理してデータを取得（最大30ページ = 約300件）
-        const items = await this.handlePagination(30);
+        // ページネーションを処理してデータを取得
+        // existingCanonicalIdsが渡された場合は差分取得モード（新着のみ取得）
+        const items = await this.handlePagination(30, existingCanonicalIds);
 
         await this.closeBrowser();
 
@@ -403,10 +471,14 @@ export class MieBiddingScraper {
 
 /**
  * スクレイピングを実行する関数
+ * existingCanonicalIds: 差分取得モード用に、DBに既存するtenderCanonicalIdのセットを渡す
+ *   - 指定した場合、既存案件が5件連続したらスクレイピングを停止（新着のみ取得）
+ *   - 指定しない場合、全ページを取得（フルスキャン）
  */
 export async function scrapeMieBiddings(
   conditions: SearchConditions,
-  fetchDetails: boolean = false
+  fetchDetails: boolean = false,
+  existingCanonicalIds?: Set<string>
 ): Promise<ScrapingResult> {
   const scraper = new MieBiddingScraper();
   
@@ -420,7 +492,7 @@ export async function scrapeMieBiddings(
   
   try {
     return await Promise.race([
-      scraper.scrape(conditions, fetchDetails),
+      scraper.scrape(conditions, fetchDetails, existingCanonicalIds),
       timeoutPromise
     ]);
   } catch (error) {
