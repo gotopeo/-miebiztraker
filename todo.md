@@ -897,3 +897,10 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 - [x] 改修案2: handlePaginationに差分取得ロジックを実装（既存案件が5件連続したら停止）
 - [x] db.tsにgetAllTenderCanonicalIds関数を追加
 - [x] scheduler.tsに差分取得モードを適用
+
+---
+
+## 手動スクレイピング高速化（スケジュール実行と同様の差分取得を適用）
+
+- [x] 手動スクレイピングとスケジュール実行のコードの違いを特定
+- [x] 手動スクレイピングにも差分取得ロジック（既存案件に到達したら停止）を適用
