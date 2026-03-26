@@ -904,3 +904,23 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer' imported from /tmp
 
 - [x] 手動スクレイピングとスケジュール実行のコードの違いを特定
 - [x] 手動スクレイピングにも差分取得ロジック（既存案件に到達したら停止）を適用
+
+---
+
+## LIFF専用ページの作成（案A実装）
+
+### 背景
+リッチメニューからアクセスするとManusのログイン画面が表示され、LINEユーザーが使用できない問題を解決する。
+LIFF専用ページ（/liff/notifications, /liff/line-connection）を作成し、LINE認証のみで動作させる。
+
+### フェーズ1: LIFF専用レイアウトとLINE連携ページを作成
+- [x] LiffLayoutコンポーネントを作成（DashboardLayout不使用、LIFF認証のみ）
+- [x] /liff/line-connection ページを作成
+- [x] /liff/notifications ページを作成
+
+### フェーズ2: App.tsxにルートを追加
+- [x] /liff/line-connection と /liff/notifications のルートを追加
+
+### フェーズ3: チェックポイントを保存して報告
+- [ ] チェックポイントを保存
+- [ ] リッチメニューのURL変更手順をユーザーに案内

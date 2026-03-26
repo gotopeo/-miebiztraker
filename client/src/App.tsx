@@ -14,6 +14,8 @@ import KeywordSettings from "./pages/KeywordSettings";
 import ScheduleSettings from "./pages/ScheduleSettings";
 import LineConnection from "./pages/LineConnection";
 import NotificationSettings from "./pages/NotificationSettings";
+import LiffLineConnection from "./pages/LiffLineConnection";
+import LiffNotificationSettings from "./pages/LiffNotificationSettings";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDetail from "./pages/UserDetail";
 
@@ -34,6 +36,9 @@ function Router() {
       <Route path={"/schedules"} component={ScheduleSettings} />
       <Route path={"/line-connection"} component={LineConnection} />
       <Route path={"/notifications"} component={NotificationSettings} />
+      {/* LIFF専用ページ（LINEアプリ内ブラウザ用・Manusログイン不要） */}
+      <Route path={"/liff/line-connection"} component={LiffLineConnection} />
+      <Route path={"/liff/notifications"} component={LiffNotificationSettings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
