@@ -246,39 +246,44 @@ export const appRouter = router({
 
       // バックグラウンドでスクレイピングを実行（awaitを使わない）
       (async () => {
+        let finalStatus: "success" | "failed" = "failed";
+        let finalError: Error | null = null;
+        let itemsScraped = 0;
+        let newItems = 0;
+
         try {
           // スクレイピング実行（全件取得モード: existingCanonicalIdsを渡さない）
           const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false);
 
           if (!result.success) {
-            // 失敗
-            await updateScrapingLog(logId, {
-              finishedAt: new Date(),
-              status: "failed",
-              errorMessage: result.errorMessage,
-            });
-            return;
+            finalError = new Error(result.errorMessage || "スクレイピング失敗");
+            return; // finallyで処理
           }
 
           // データベースに保存（新規判定あり）
           const convertedItems = result.items.map(convertToInsertBidding);
-          const { newBiddings, updatedBiddings } = await detectNewBiddings(convertedItems);
+          const { newBiddings } = await detectNewBiddings(convertedItems);
 
-          // ログ更新
-          await updateScrapingLog(logId, {
-            finishedAt: new Date(),
-            status: "success",
-            itemsScraped: result.totalCount,
-            newItems: newBiddings.length,
-          });
+          finalStatus = "success";
+          itemsScraped = result.totalCount;
+          newItems = newBiddings.length;
         } catch (error) {
-          // 予期しないエラー
-          await updateScrapingLog(logId, {
-            finishedAt: new Date(),
-            status: "failed",
-            errorMessage: error instanceof Error ? error.message : String(error),
-            errorDetails: error instanceof Error ? error.stack : undefined,
-          });
+          // タイムアウト・予期しないエラー
+          finalError = error instanceof Error ? error : new Error(String(error));
+        } finally {
+          // どんな場合でも必ずログを更新（runningのまま残さない）
+          try {
+            await updateScrapingLog(logId, {
+              finishedAt: new Date(),
+              status: finalStatus,
+              itemsScraped,
+              newItems,
+              errorMessage: finalError?.message,
+              errorDetails: finalError?.stack,
+            });
+          } catch (logError) {
+            console.error("[Scraping] Failed to update scraping log:", logError);
+          }
         }
       })(); // 即座に実行
 
