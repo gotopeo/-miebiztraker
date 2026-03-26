@@ -1,6 +1,6 @@
 import * as schedule from 'node-schedule';
 import { scrapeMieBiddings, convertToInsertBidding, type SearchConditions } from './scraper';
-import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting, getActiveNotificationSubscriptions, getAllTenderCanonicalIds } from './db';
+import { insertBiddingsBatch, insertScrapingLog, getActiveSchedules, updateScheduleSetting, getActiveNotificationSubscriptions } from './db';
 import { runNotificationCheck } from './notificationJob';
 import { detectNewBiddings } from './newBiddingDetector';
 import { runCleanupJob } from './cleanupJob';
@@ -324,11 +324,8 @@ async function executeScheduledScraping(scheduleId: number, scheduleName: string
       useLatestAnnouncement: true, // 最新公告情報を取得
     };
     
-    // 差分取得モード: DBに既存するtenderCanonicalIdを取得してスクレイピングに渡す
-    const existingCanonicalIds = await getAllTenderCanonicalIds();
-    console.log(`[Scheduler] Loaded ${existingCanonicalIds.size} existing canonical IDs for diff mode`);
-    
-    const result = await scrapeMieBiddings(conditions, false, existingCanonicalIds); // 差分取得モード
+    // 全件取得モード: existingCanonicalIdsを渡さない
+    const result = await scrapeMieBiddings(conditions, false);
     itemsCount = result.items.length;
     
     if (itemsCount > 0) {

@@ -39,7 +39,6 @@ import {
   getAllUsers,
   getUserById,
   getSystemStats,
-  getAllTenderCanonicalIds,
 } from "./db";
 import type { Issuer } from "../drizzle/schema";
 import { getDb } from "./db";
@@ -248,10 +247,8 @@ export const appRouter = router({
       // バックグラウンドでスクレイピングを実行（awaitを使わない）
       (async () => {
         try {
-          // スクレイピング実行
-          // 差分取得モード: 既存案件IDを取得して新着のみスクレイピング（スケジュール実行と同様）
-          const existingCanonicalIds = await getAllTenderCanonicalIds();
-          const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false, existingCanonicalIds);
+          // スクレイピング実行（全件取得モード: existingCanonicalIdsを渡さない）
+          const result = await scrapeMieBiddings({ useLatestAnnouncement: true }, false);
 
           if (!result.success) {
             // 失敗
