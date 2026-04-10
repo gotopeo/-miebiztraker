@@ -1,0 +1,28 @@
+name: サーバーウォームアップ
+
+on:
+  schedule:
+    - cron: "55 23 * * *"  # 毎日 8:55 JST
+    - cron: "55 2 * * *"   # 毎日 11:55 JST
+    - cron: "55 6 * * *"   # 毎日 15:55 JST
+  workflow_dispatch:
+
+jobs:
+  warmup:
+    name: サーバー起動リクエスト
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: サーバーにアクセスしてウォームアップ
+        run: |
+          echo "ウォームアップ開始: $(TZ='Asia/Tokyo' date '+%Y-%m-%d %H:%M:%S JST')"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 --retry 2 --retry-delay 5 \
+            "https://mbt.gripe/" || echo "000" )
+          echo "HTTPステータス: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
+            echo "✅ サーバー起動確認"
+          else
+            echo "⚠️ 応答コード: $HTTP_STATUS"
+          fi
+          echo "ウォームアップ完了: $(TZ='Asia/Tokyo' date '+%Y-%m-%d %H:%M:%S JST')"
