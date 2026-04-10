@@ -49,3 +49,73 @@ export const CONSTRUCTION_TYPES = [
 ] as const;
 
 export type ConstructionType = typeof CONSTRUCTION_TYPES[number];
+
+/**
+ * 区分（工事・委託）の定義
+ */
+export type Category = "工事" | "委託";
+
+/**
+ * 「工事」区分に属する種別（〜工事で終わるもの）
+ */
+export const CONSTRUCTION_CATEGORY_TYPES: readonly string[] = [
+  "土木一式工事",
+  "建築一式工事",
+  "大工工事",
+  "左官工事",
+  "とび・土工・コンクリート工事",
+  "石工事",
+  "屋根工事",
+  "電気工事",
+  "管工事",
+  "タイル・れんが・ブロック工事",
+  "鋼構造物工事",
+  "鉄筋工事",
+  "ほ装工事",
+  "しゅんせつ工事",
+  "板金工事",
+  "ガラス工事",
+  "塗装工事",
+  "防水工事",
+  "内装仕上工事",
+  "機械器具設置工事",
+  "熱絶縁工事",
+  "電気通信工事",
+  "造園工事",
+  "さく井工事",
+  "建具工事",
+  "水道施設工事",
+  "消防施設工事",
+  "清掃施設工事",
+  "解体工事",
+] as const;
+
+/**
+ * 「委託」区分に属する種別（測量・コンサル・業務・調査）
+ */
+export const CONSIGNMENT_CATEGORY_TYPES: readonly string[] = [
+  "測量",
+  "建築関係建設コンサルタント",
+  "土木関係建設コンサルタント",
+  "地質調査",
+  "補償関係コンサルタント",
+  "小規模修繕業務",
+  "舗装道路補修業務",
+  "除草業務",
+  "剪定業務",
+  "路面清掃業務",
+  "雪氷対策業務",
+  "保守点検業務",
+  "その他維持管理業務",
+  "その他調査",
+] as const;
+
+/**
+ * 区分に応じて表示する種別リストを返す
+ * @param category - "工事" | "委託" | null（nullの場合は全件）
+ */
+export function getFilteredTypes(category: Category | null): readonly string[] {
+  if (category === "工事") return CONSTRUCTION_CATEGORY_TYPES;
+  if (category === "委託") return CONSIGNMENT_CATEGORY_TYPES;
+  return CONSTRUCTION_TYPES;
+}

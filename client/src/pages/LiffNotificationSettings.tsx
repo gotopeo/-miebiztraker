@@ -20,11 +20,12 @@ import { Loader2, Plus, Pencil, Trash2, Bell, BellOff, AlertCircle, Send } from 
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import LiffLayout from "@/components/LiffLayout";
-import { CONSTRUCTION_TYPES } from "../../../shared/constructionTypes";
+import { CONSTRUCTION_TYPES, getFilteredTypes, type Category } from "../../../shared/constructionTypes";
 
 interface NotificationFormData {
   name: string;
   issuerIds: number[];
+  category: Category | null;
   projectTypes: string[];
   notificationTimes: string;
 }
@@ -32,6 +33,7 @@ interface NotificationFormData {
 const initialFormData: NotificationFormData = {
   name: "",
   issuerIds: [],
+  category: null,
   projectTypes: [],
   notificationTimes: "09:00",
 };
@@ -68,10 +70,19 @@ export default function LiffNotificationSettings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let projectTypeValue: string | undefined;
+      if (formData.category && formData.projectTypes.length > 0) {
+        projectTypeValue = [formData.category, ...formData.projectTypes].join(",");
+      } else if (formData.category) {
+        projectTypeValue = formData.category;
+      } else if (formData.projectTypes.length > 0) {
+        projectTypeValue = formData.projectTypes.join(",");
+      }
+
       const payload = {
         name: formData.name,
         issuerIds: formData.issuerIds.length > 0 ? formData.issuerIds.join(",") : undefined,
-        projectType: formData.projectTypes.length > 0 ? formData.projectTypes.join(",") : undefined,
+        projectType: projectTypeValue,
         notificationTimes: formData.notificationTimes,
       };
 
@@ -101,14 +112,24 @@ export default function LiffNotificationSettings() {
         .filter((issuer) => organNames.includes(issuer.name))
         .map((issuer) => issuer.id);
     }
-    const projectTypesArray = subscription.projectType
+    const rawTypes = subscription.projectType
       ? subscription.projectType.split(",").map((t: string) => t.trim()).filter((t: string) => t.length > 0)
       : [];
+    let parsedCategory: Category | null = null;
+    let parsedProjectTypes: string[] = [];
+    for (const t of rawTypes) {
+      if (t === "工事" || t === "委託") {
+        parsedCategory = t as Category;
+      } else {
+        parsedProjectTypes.push(t);
+      }
+    }
     setFormData({
       name: subscription.name,
       issuerIds: issuerIdsArray,
-      projectTypes: projectTypesArray,
-      notificationTimes: subscription.notificationTimes || "08:00",
+      category: parsedCategory,
+      projectTypes: parsedProjectTypes,
+      notificationTimes: subscription.notificationTimes || "09:00",
     });
     setIsDialogOpen(true);
   };
@@ -236,6 +257,42 @@ export default function LiffNotificationSettings() {
                   <p className="text-xs text-muted-foreground">未選択の場合は全ての発注機関が対象</p>
                 </div>
 
+                {/* 区分選択 */}
+                <div className="space-y-2">
+                  <Label>区分</Label>
+                  <div className="flex gap-3">
+                    {(["工事", "委託"] as Category[]).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          const newCategory = formData.category === cat ? null : cat;
+                          const allowedTypes = newCategory ? getFilteredTypes(newCategory) : CONSTRUCTION_TYPES;
+                          const filteredTypes = formData.projectTypes.filter((t) => allowedTypes.includes(t));
+                          setFormData({ ...formData, category: newCategory, projectTypes: filteredTypes });
+                        }}
+                        className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
+                          formData.category === cat
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-foreground border-input hover:bg-accent"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                    {formData.category && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, category: null })}
+                        className="px-3 py-2 rounded-md border text-sm text-muted-foreground hover:bg-accent"
+                      >
+                        クリア
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">未選択の場合は工事・委託の両方が対象</p>
+                </div>
+
                 {/* 工種/委託種別 */}
                 <div className="space-y-2">
                   <Label>工種/委託種別</Label>
@@ -250,7 +307,7 @@ export default function LiffNotificationSettings() {
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
                       <SelectItem value="all">全ての種別</SelectItem>
-                      {CONSTRUCTION_TYPES.map((type: string) => (
+                      {getFilteredTypes(formData.category).map((type: string) => (
                         <SelectItem key={type} value={type}>
                           {type}
                         </SelectItem>
