@@ -33,8 +33,14 @@ const initialFormData: NotificationFormData = {
   name: "",
   issuerIds: [],
   projectTypes: [],
-  notificationTimes: "08:00",
+  notificationTimes: "09:00",
 };
+
+const NOTIFICATION_TIME_OPTIONS = [
+  { label: "9:00", value: "09:00" },
+  { label: "12:00", value: "12:00" },
+  { label: "16:00", value: "16:00" },
+];
 
 export default function LiffNotificationSettings() {
   const [, setLocation] = useLocation();
@@ -264,17 +270,10 @@ export default function LiffNotificationSettings() {
                     <SelectTrigger>
                       <SelectValue placeholder="時刻を選択" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {Array.from({ length: 144 }, (_, i) => {
-                        const hour = Math.floor(i / 6);
-                        const minute = (i % 6) * 10;
-                        const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-                        return (
-                          <SelectItem key={timeStr} value={timeStr}>
-                            {timeStr}
-                          </SelectItem>
-                        );
-                      })}
+                    <SelectContent>
+                      {NOTIFICATION_TIME_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">指定した時刻に新規案件を通知します</p>
