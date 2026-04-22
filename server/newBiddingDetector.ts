@@ -120,9 +120,13 @@ export async function detectNewBiddings(scrapedBiddings: Partial<InsertBidding>[
         }
       } else {
         // タイトル変更なし - lastSeenAtのみ更新
+        // NOTE: updatedAt を明示的に保持することで onUpdateNow() による自動更新を防ぐ
+        // （onUpdateNow() = MySQL の ON UPDATE CURRENT_TIMESTAMP）
+        // lastSeenAt を更新するだけで updatedAt も自動更新されてしまい、
+        // 通知ジョブが全案件を「更新案件」として誤検出する問題を防ぐ
         await db
           .update(biddings)
-          .set({ lastSeenAt: now })
+          .set({ lastSeenAt: now, updatedAt: existingBidding.updatedAt })
           .where(eq(biddings.id, existingBidding.id));
       }
     }
