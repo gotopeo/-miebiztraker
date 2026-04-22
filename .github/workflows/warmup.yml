@@ -1,12 +1,14 @@
 name: サーバーウォームアップ
-
+# JST時刻とUTC変換:
+#   8:55 JST = 23:55 UTC (前日)
+#  11:55 JST = 02:55 UTC
+#  15:55 JST = 06:55 UTC
 on:
   schedule:
     - cron: "55 23 * * *"  # 毎日 8:55 JST
     - cron: "55 2 * * *"   # 毎日 11:55 JST
     - cron: "55 6 * * *"   # 毎日 15:55 JST
-  workflow_dispatch:
-
+  workflow_dispatch:        # 手動実行も可能
 jobs:
   warmup:
     name: サーバー起動リクエスト
@@ -16,13 +18,21 @@ jobs:
       - name: サーバーにアクセスしてウォームアップ
         run: |
           echo "ウォームアップ開始: $(TZ='Asia/Tokyo' date '+%Y-%m-%d %H:%M:%S JST')"
+          
+          # mbt.gripe にアクセス（最大30秒待機、失敗してもワークフローは続行）
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 30 --retry 2 --retry-delay 5 \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
             "https://mbt.gripe/" || echo "000" )
+          
           echo "HTTPステータス: $HTTP_STATUS"
+          
           if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
-            echo "✅ サーバー起動確認"
+            echo "✅ サーバー起動確認 (ステータス: $HTTP_STATUS)"
           else
-            echo "⚠️ 応答コード: $HTTP_STATUS"
+            echo "⚠️ サーバーの応答が想定外 (ステータス: $HTTP_STATUS)"
+            echo "サーバーが起動中の場合は数分後に正常になります"
           fi
+          
           echo "ウォームアップ完了: $(TZ='Asia/Tokyo' date '+%Y-%m-%d %H:%M:%S JST')"
